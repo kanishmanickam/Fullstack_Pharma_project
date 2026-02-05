@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
       const mockUsers = [
         { id: 1, username: 'admin', password: 'admin123', role: 'owner', email: 'admin@medistock.com' },
         { id: 2, username: 'staff', password: 'staff123', role: 'staff', email: 'staff@medistock.com' },
+        { id: 3, username: 'customer', password: 'customer123', role: 'customer', email: 'customer@medistock.com' },
       ];
       
       const user = mockUsers.find(u => u.username === username && u.password === password);

@@ -27,8 +27,10 @@ const Login = () => {
       // Redirect based on role
       if (result.user.role === 'owner' || result.user.role === 'staff') {
         navigate('/dashboard');
+      } else if (result.user.role === 'customer') {
+        navigate('/billing'); // Customers can access billing page to see their purchases
       } else {
-        navigate('/customer-portal');
+        navigate('/dashboard');
       }
     } else {
       setError(result.message);

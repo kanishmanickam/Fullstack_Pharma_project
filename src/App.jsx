@@ -11,6 +11,7 @@ import Customers from './pages/Customers';
 import StockIntelligence from './pages/StockIntelligence';
 import ExcelUpload from './pages/ExcelUpload';
 import FinancialReports from './pages/FinancialReports';
+import MedicineInventory from './pages/MedicineInventory';
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
-          
+
           <Route
             path="/dashboard"
             element={
@@ -28,7 +29,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/inventory"
             element={
@@ -37,7 +38,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/billing"
             element={
@@ -46,7 +47,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/customers"
             element={
@@ -55,7 +56,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/excel-upload"
             element={
@@ -64,7 +65,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/stock-intelligence"
             element={
@@ -73,7 +74,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/reports"
             element={
@@ -82,7 +83,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
           <Route
             path="/financial-reports"
             element={
@@ -91,7 +91,15 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/medicine-inventory"
+            element={
+              <ProtectedRoute allowedRoles={['owner', 'staff']}>
+                <MedicineInventory />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

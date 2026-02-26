@@ -16,6 +16,8 @@ import reportRoutes from './routes/reportRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
 import prescriptionRoutes from './routes/prescriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import supplierRoutes from './routes/supplierRoutes.js';
+import medicineInvRoutes from './routes/medicineInvRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +52,9 @@ app.use('/api/orders', orderRoutes);
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/medicine-inv', medicineInvRoutes);
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -74,7 +79,7 @@ app.listen(PORT, () => {
     ╠═══════════════════════════════════════════════════╣
     ║ API Server:  http://localhost:${PORT}                  ║
     ║ Health:      http://localhost:${PORT}/api/health       ║
-    ║ Environment: ${process.env.NODE_ENV || 'development'             }       ║
+    ║ Environment: ${process.env.NODE_ENV || 'development'}       ║
     ║ Database:    ${process.env.MONGODB_URI || 'Not configured'} ║
     ╚═══════════════════════════════════════════════════╝
   `);

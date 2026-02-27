@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaMicrophone, FaStop, FaLanguage, FaPaperPlane } from 'react-icons/fa';
+import { speakTamil, speakEnglish, stopSpeech, isTamilVoiceAvailable } from '../utils/tamilTTS';
 
 const Chatbot = ({ onClose }) => {
   const [messages, setMessages] = useState([
@@ -21,8 +22,16 @@ const Chatbot = ({ onClose }) => {
       recognitionInstance.interimResults = false;
       recognitionInstance.lang = language === 'ta' ? 'ta-IN' : 'en-US';
 
+      recognitionInstance.onstart = () => {
+        console.log(`Speech recognition started in ${language === 'ta' ? 'Tamil' : 'English'}`);
+      };
+
       recognitionInstance.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        console.log(`Recognized text (${language}):`, transcript);
         setInput(transcript);
         setIsListening(false);
         // Auto-send after voice input
@@ -31,14 +40,24 @@ const Chatbot = ({ onClose }) => {
 
       recognitionInstance.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
+        alert(`Speech recognition error: ${event.error}. Make sure you're speaking clearly in ${language === 'ta' ? 'Tamil' : 'English'}.`);
         setIsListening(false);
       };
 
       recognitionInstance.onend = () => {
+        console.log('Speech recognition ended');
         setIsListening(false);
       };
 
       setRecognition(recognitionInstance);
+    }
+
+    // Load voices for speech synthesis
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+      };
     }
   }, [language]);
 
@@ -47,39 +66,75 @@ const Chatbot = ({ onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Text-to-Speech
-  const speak = (text) => {
+  // Load voices on component mount
+  useEffect(() => {
     if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
+      // Load voices
+      window.speechSynthesis.onvoiceschanged = () => {
+        const hasTamilVoice = isTamilVoiceAvailable();
+        console.log('Tamil voice available:', hasTamilVoice);
+        const voices = window.speechSynthesis.getVoices();
+        console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`).join(', '));
+      };
+      // Trigger voice loading
+      window.speechSynthesis.getVoices();
+    }
+  }, []);
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'ta' ? 'ta-IN' : 'en-US';
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      window.speechSynthesis.speak(utterance);
+  // Text-to-Speech with Tamil support
+  const speak = async (text) => {
+    try {
+      if (language === 'ta') {
+        await speakTamil(text, {
+          rate: 0.8,
+          pitch: 1.0,
+          volume: 1.0,
+          onStart: () => setIsSpeaking(true),
+          onEnd: () => setIsSpeaking(false),
+          onError: (error) => {
+            console.error('Tamil speech error:', error);
+            setIsSpeaking(false);
+          }
+        });
+      } else {
+        await speakEnglish(text, {
+          rate: 1.0,
+          pitch: 1.0,
+          volume: 1.0,
+          onStart: () => setIsSpeaking(true),
+          onEnd: () => setIsSpeaking(false),
+          onError: (error) => {
+            console.error('English speech error:', error);
+            setIsSpeaking(false);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Speech error:', error);
+      setIsSpeaking(false);
     }
   };
 
   // Stop speaking
   const stopSpeaking = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
+    stopSpeech();
+    setIsSpeaking(false);
   };
 
   // Start voice input
   const startVoiceInput = () => {
     if (recognition) {
       setIsListening(true);
-      recognition.lang = language === 'ta' ? 'ta-IN' : 'en-US';
-      recognition.start();
+      // Ensure language is set before starting
+      const lang = language === 'ta' ? 'ta-IN' : 'en-US';
+      recognition.lang = lang;
+      console.log(`Starting speech recognition in: ${lang}`);
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        setIsListening(false);
+      }
     } else {
       alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
     }

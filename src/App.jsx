@@ -10,6 +10,7 @@ import Reports from './pages/Reports';
 import Customers from './pages/Customers';
 import StockIntelligence from './pages/StockIntelligence';
 import ExcelUpload from './pages/ExcelUpload';
+import FinancialReports from './pages/FinancialReports';
 
 function App() {
   return (
@@ -78,6 +79,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/financial-reports"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <FinancialReports />
               </ProtectedRoute>
             }
           />

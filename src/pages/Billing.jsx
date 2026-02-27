@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { medicines, customers } from '../data/mockData';
 import { formatCurrency, sortByFEFO } from '../utils/helpers';
-import { FaSearch, FaTrash, FaCheck } from 'react-icons/fa';
+import { FaSearch, FaTrash, FaCheck, FaMicrophone, FaStop, FaPlus, FaEdit, FaTimesCircle } from 'react-icons/fa';
 
 const Billing = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +14,69 @@ const Billing = () => {
   const [paymentMethod, setPaymentMethod] = useState('cash'); // cash or gpay
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [currentBill, setCurrentBill] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(null); // 'search' or 'quantity'
+  const [recognition, setRecognition] = useState(null);
+  const [editingItem, setEditingItem] = useState(null); // Track which item is being edited
+  const [editQuantity, setEditQuantity] = useState(1);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (voiceMode === 'search') {
+          setSearchTerm(transcript);
+        } else if (voiceMode === 'quantity') {
+          // Extract numbers from transcript
+          const numbers = transcript.match(/\d+/);
+          if (numbers) {
+            setQuantity(parseInt(numbers[0]));
+          }
+        }
+        setIsListening(false);
+        setVoiceMode(null);
+      };
+
+      recognitionInstance.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        setVoiceMode(null);
+      };
+
+      recognitionInstance.onend = () => {
+        setIsListening(false);
+      };
+
+      setRecognition(recognitionInstance);
+    }
+  }, [voiceMode]);
+
+  // Start voice input
+  const startVoiceInput = (mode) => {
+    if (recognition) {
+      setVoiceMode(mode);
+      setIsListening(true);
+      recognition.start();
+    } else {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
+  };
+
+  // Stop voice input
+  const stopVoiceInput = () => {
+    if (recognition && isListening) {
+      recognition.stop();
+      setIsListening(false);
+      setVoiceMode(null);
+    }
+  };
 
   // Filter medicines based on search
   const filteredMedicines = medicines.filter(med =>
@@ -59,11 +122,50 @@ const Billing = () => {
     setSelectedMedicine(null);
     setQuantity(1);
     setSearchTerm('');
+    alert('Item added to bill successfully! ✅');
   };
 
-  // Remove item from bill
+  // Remove item from bill (DELETE operation)
   const handleRemoveItem = (medicineId) => {
-    setBillItems(billItems.filter(item => item.medicineId !== medicineId));
+    if (window.confirm('Are you sure you want to remove this item?')) {
+      setBillItems(billItems.filter(item => item.medicineId !== medicineId));
+      alert('Item deleted successfully! ✅');
+    }
+  };
+
+  // Update item quantity (UPDATE operation)
+  const handleUpdateItem = (medicineId) => {
+    if (editQuantity <= 0) {
+      alert('Quantity must be greater than 0');
+      return;
+    }
+
+    const medicine = medicines.find(m => m.id === medicineId);
+    if (editQuantity > medicine.quantity) {
+      alert(`Not enough stock! Available: ${medicine.quantity}`);
+      return;
+    }
+
+    setBillItems(billItems.map(item => {
+      if (item.medicineId === medicineId) {
+        return {
+          ...item,
+          quantity: editQuantity,
+          total: item.price * editQuantity
+        };
+      }
+      return item;
+    }));
+    
+    setEditingItem(null);
+    setEditQuantity(1);
+    alert('Item updated successfully! ✅');
+  };
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setEditQuantity(1);
   };
 
   // Calculate bill totals
@@ -222,9 +324,23 @@ const Billing = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by name or category..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-16 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
+                <button
+                  onClick={() => isListening && voiceMode === 'search' ? stopVoiceInput() : startVoiceInput('search')}
+                  className={`absolute right-2 top-2 p-2 rounded-lg transition-colors ${
+                    isListening && voiceMode === 'search'
+                      ? 'bg-red-500 text-white animate-pulse'
+                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                  }`}
+                  title={isListening && voiceMode === 'search' ? 'Stop voice input' : 'Voice search'}
+                >
+                  {isListening && voiceMode === 'search' ? <FaStop /> : <FaMicrophone />}
+                </button>
               </div>
+              {isListening && voiceMode === 'search' && (
+                <p className="text-sm text-primary-600 mt-1">🎤 Listening for medicine name...</p>
+              )}
             </div>
 
             {/* Medicine List */}
@@ -293,28 +409,51 @@ const Billing = () => {
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max={selectedMedicine.quantity}
-                      value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max={selectedMedicine.quantity}
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      />
+                      <button
+                        onClick={() => isListening && voiceMode === 'quantity' ? stopVoiceInput() : startVoiceInput('quantity')}
+                        className={`absolute right-2 top-2 p-1.5 rounded transition-colors ${
+                          isListening && voiceMode === 'quantity'
+                            ? 'bg-red-500 text-white animate-pulse'
+                            : 'bg-primary-600 text-white hover:bg-primary-700'
+                        }`}
+                        title={isListening && voiceMode === 'quantity' ? 'Stop voice input' : 'Voice quantity'}
+                      >
+                        {isListening && voiceMode === 'quantity' ? <FaStop size={12} /> : <FaMicrophone size={12} />}
+                      </button>
+                    </div>
+                    {isListening && voiceMode === 'quantity' && (
+                      <p className="text-xs text-primary-600 mt-1">🎤 Say the quantity number...</p>
+                    )}
                   </div>
                   <div className="flex items-end">
                     <button
                       onClick={handleAddItem}
-                      className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                      className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
                     >
-                      Add
+                      <FaPlus />
+                      Add Item
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>💡 CRUD Operations:</strong> ADD items to bill → UPDATE quantity → DELETE unwanted items
+              </p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-2">
               <p className="text-sm text-yellow-800">
                 <strong>FEFO Note:</strong> Medicines are automatically sorted by expiry date. Select items with nearest expiry first.
               </p>
@@ -323,39 +462,121 @@ const Billing = () => {
 
           {/* Right Section - Bill Summary */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Bill Summary</h2>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <FaCheck className="text-primary-600" />
+              Bill Summary
+            </h2>
 
             {/* Bill Items */}
             <div className="mb-6">
               {billItems.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No items added yet</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-2">No items added yet</p>
+                  <p className="text-xs text-gray-400">Use the form on the left to ADD items</p>
+                </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {billItems.map((item, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-800">{item.name}</p>
-                          <p className="text-xs text-gray-600">
-                            Batch: {item.batchNo} | Rack: {item.rackNo}
-                          </p>
-                          <p className="text-xs text-gray-500">Expiry: {item.expiryDate}</p>
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+                      {editingItem === item.medicineId ? (
+                        // EDIT MODE (UPDATE operation)
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-800">{item.name}</p>
+                              <p className="text-xs text-gray-600">
+                                Batch: {item.batchNo} | Rack: {item.rackNo}
+                              </p>
+                            </div>
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">EDITING</span>
+                          </div>
+                          
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-600 block mb-1">Update Quantity</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={editQuantity}
+                                onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
+                                className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                autoFocus
+                              />
+                            </div>
+                            <button
+                              onClick={() => handleUpdateItem(item.medicineId)}
+                              className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 flex items-center gap-1 text-sm"
+                            >
+                              <FaCheck size={12} />
+                              Update
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="bg-gray-400 text-white px-4 py-1.5 rounded hover:bg-gray-500 flex items-center gap-1 text-sm"
+                            >
+                              <FaTimesCircle size={12} />
+                              Cancel
+                            </button>
+                          </div>
+                          
+                          <div className="text-xs text-gray-500">
+                            New Total: {formatCurrency(item.price * editQuantity)}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleRemoveItem(item.medicineId)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">
-                          {formatCurrency(item.price)} × {item.quantity}
-                        </span>
-                        <span className="font-bold text-primary-600">{formatCurrency(item.total)}</span>
-                      </div>
+                      ) : (
+                        // VIEW MODE
+                        <>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-semibold text-gray-800">{item.name}</p>
+                              <p className="text-xs text-gray-600">
+                                Batch: {item.batchNo} | Rack: {item.rackNo}
+                              </p>
+                              <p className="text-xs text-gray-500">Expiry: {item.expiryDate}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingItem(item.medicineId);
+                                  setEditQuantity(item.quantity);
+                                }}
+                                className="text-blue-600 hover:text-blue-700 p-1.5 hover:bg-blue-50 rounded"
+                                title="Edit quantity (UPDATE)"
+                              >
+                                <FaEdit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveItem(item.medicineId)}
+                                className="text-red-600 hover:text-red-700 p-1.5 hover:bg-red-50 rounded"
+                                title="Remove item (DELETE)"
+                              >
+                                <FaTrash size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">
+                              {formatCurrency(item.price)} × {item.quantity}
+                            </span>
+                            <span className="font-bold text-primary-600">{formatCurrency(item.total)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {/* CRUD Operations Legend */}
+              {billItems.length > 0 && (
+                <div className="mt-3 p-2 bg-gray-100 rounded text-xs space-y-1">
+                  <p className="font-semibold text-gray-700">📝 CRUD Operations Available:</p>
+                  <div className="flex flex-wrap gap-3 text-gray-600">
+                    <span>✅ <strong>ADD:</strong> Use form left</span>
+                    <span>✏️ <strong>UPDATE:</strong> Click edit icon</span>
+                    <span>🗑️ <strong>DELETE:</strong> Click trash icon</span>
+                    <span>👁️ <strong>DISPLAY:</strong> View all items</span>
+                  </div>
                 </div>
               )}
             </div>

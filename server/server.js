@@ -14,6 +14,8 @@ import alertRoutes from './routes/alertRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
+import prescriptionRoutes from './routes/prescriptionRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,7 +28,7 @@ await connectDB();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Frontend URL
+  origin: ['http://localhost:5173', 'http://localhost:5174'], // Frontend URL
   credentials: true,
 }));
 app.use(express.json());
@@ -42,6 +44,11 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/orders', orderRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

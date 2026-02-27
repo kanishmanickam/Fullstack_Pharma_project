@@ -1,6 +1,7 @@
-import { Bill, Medicine, Customer, InventoryHistory } from '../models/index.js';
+import { Bill, Medicine, Customer, InventoryHistory, User } from '../models/index.js';
 import { generateBillNumber, sortByFEFO, formatCurrency } from '../utils/helpers.js';
-import { sendBillNotification } from '../utils/notifications.js';
+import { sendBillNotification, sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
+import { generateBillPDF } from '../utils/pdfGenerator.js';
 import log from '../utils/logger.js';
 
 // Create bill
@@ -98,9 +99,34 @@ export const createBill = async (req, res) => {
 
     // Send notification
     try {
+      // Generate PDF
+      const pdfPath = await generateBillPDF(bill);
+      log('INFO', 'Bill PDF generated', { pdfPath });
+
+      // Send bill notification with PDF
       await sendBillNotification(bill, customerPhone, customerEmail);
+
+      // If payment method is GPay, notify owner
+      if (paymentMethod === 'gpay') {
+        const owner = await User.findOne({ role: 'owner' });
+        if (owner) {
+          await sendEmailNotification(
+            owner.email,
+            'GPay Payment Received',
+            `A GPay payment of ₹${grandTotal.toFixed(2)} has been received for Bill #${bill.billNumber}\nCustomer: ${customerName}`
+          );
+          
+          // Also send WhatsApp to owner if configured
+          if (process.env.OWNER_WHATSAPP_NUMBER) {
+            await sendWhatsAppNotification(
+              process.env.OWNER_WHATSAPP_NUMBER,
+              `💰 GPay Payment Received\n\nAmount: ₹${grandTotal.toFixed(2)}\nBill: #${bill.billNumber}\nCustomer: ${customerName}`
+            );
+          }
+        }
+      }
     } catch (notifError) {
-      log('WARN', 'Notification failed but bill created', { billId: bill._id });
+      log('WARN', 'Notification failed but bill created', { billId: bill._id, error: notifError.message });
     }
 
     log('INFO', 'Bill created successfully', { billId: bill._id, billNumber: bill.billNumber });

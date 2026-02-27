@@ -413,6 +413,146 @@ const notificationSchema = new mongoose.Schema(
 
 const Notification = mongoose.model('Notification', notificationSchema);
 
+// ============ PRESCRIPTION SCHEMA ============
+const prescriptionSchema = new mongoose.Schema(
+  {
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: true,
+    },
+    customerName: {
+      type: String,
+      required: true,
+    },
+    customerPhone: String,
+    prescriptionFile: {
+      type: String,
+      required: true, // Path to uploaded file
+    },
+    fileName: String,
+    fileSize: Number,
+    uploadDate: {
+      type: Date,
+      default: Date.now,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'fulfilled'],
+      default: 'pending',
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    reviewDate: Date,
+    reviewNotes: String,
+    prescribedMedicines: [
+      {
+        medicineName: String,
+        dosage: String,
+        quantity: Number,
+        instructions: String,
+      },
+    ],
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+    },
+  },
+  { timestamps: true }
+);
+
+const Prescription = mongoose.model('Prescription', prescriptionSchema);
+
+// ============ ORDER SCHEMA ============
+const orderSchema = new mongoose.Schema(
+  {
+    orderNumber: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: true,
+    },
+    customerName: {
+      type: String,
+      required: true,
+    },
+    customerPhone: String,
+    orderType: {
+      type: String,
+      enum: ['pickup', 'delivery'],
+      default: 'pickup',
+    },
+    deliveryAddress: String,
+    items: [
+      {
+        medicineId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Medicine',
+        },
+        medicineName: String,
+        quantity: Number,
+        price: Number,
+        total: Number,
+      },
+    ],
+    prescriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Prescription',
+    },
+    subtotal: {
+      type: Number,
+      required: true,
+    },
+    tax: {
+      type: Number,
+      default: 0,
+    },
+    deliveryCharge: {
+      type: Number,
+      default: 0,
+    },
+    grandTotal: {
+      type: Number,
+      required: true,
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'gpay', 'card', 'upi', 'cod'],
+      default: 'cod',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed'],
+      default: 'pending',
+    },
+    orderStatus: {
+      type: String,
+      enum: ['placed', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled'],
+      default: 'placed',
+    },
+    placedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    confirmedAt: Date,
+    readyAt: Date,
+    deliveredAt: Date,
+    staffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+  },
+  { timestamps: true }
+);
+
+const Order = mongoose.model('Order', orderSchema);
+
 export {
   User,
   Medicine,
@@ -423,4 +563,6 @@ export {
   UploadLog,
   Report,
   Notification,
+  Prescription,
+  Order,
 };

@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers, 
-  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot 
+  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave 
 } from 'react-icons/fa';
 import { useState } from 'react';
 import Chatbot from './Chatbot';
@@ -26,6 +26,7 @@ const Layout = ({ children }) => {
     { path: '/excel-upload', label: 'Excel Upload', icon: <FaFileUpload />, roles: ['owner', 'staff'] },
     { path: '/stock-intelligence', label: 'Stock Intelligence', icon: <FaBrain />, roles: ['owner'] },
     { path: '/reports', label: 'Reports & Analytics', icon: <FaChartLine />, roles: ['owner'] },
+    { path: '/financial-reports', label: 'Financial Reports', icon: <FaMoneyBillWave />, roles: ['owner'] },
   ];
 
   const filteredNavItems = navItems.filter(item => 

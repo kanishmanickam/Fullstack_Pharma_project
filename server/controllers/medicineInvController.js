@@ -26,7 +26,7 @@ export const getMedicineInvById = async (req, res) => {
     }
 };
 
-// Search by medicineId
+// Search by medicineId or name
 export const searchByMedicineId = async (req, res) => {
     try {
         const { query } = req.query;
@@ -34,7 +34,10 @@ export const searchByMedicineId = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Search query is required' });
         }
         const medicines = await MedicineInventory.find({
-            medicineId: { $regex: query, $options: 'i' },
+            $or: [
+                { medicineId: { $regex: query, $options: 'i' } },
+                { name: { $regex: query, $options: 'i' } }
+            ]
         }).populate('supplierId', 'name contact');
         res.status(200).json({ success: true, count: medicines.length, medicines });
     } catch (error) {

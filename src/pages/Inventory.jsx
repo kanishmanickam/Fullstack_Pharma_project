@@ -1,15 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { medicines } from '../data/mockData';
+import axiosInstance from '../utils/axiosConfig';
 import { getExpiryStatus, getStockStatus, filterMedicines, sortByFEFO } from '../utils/helpers';
 import { FaSearch, FaSort } from 'react-icons/fa';
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('fefo');
-  
+  const [medicines, setMedicines] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const res = await axiosInstance.get('/inventory');
+        setMedicines(res.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMedicines();
+  }, []);
+
   let filteredMedicines = filterMedicines(medicines, searchQuery);
-  
+
   if (sortBy === 'fefo') {
     filteredMedicines = sortByFEFO(filteredMedicines);
   }
@@ -56,10 +72,22 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredMedicines.map((medicine) => {
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    Loading inventory...
+                  </td>
+                </tr>
+              ) : filteredMedicines.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    No medicines found
+                  </td>
+                </tr>
+              ) : filteredMedicines.map((medicine) => {
                 const expiryStatus = getExpiryStatus(medicine.expiryDate);
                 const stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
-                
+
                 return (
                   <tr key={medicine.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -68,22 +96,20 @@ const Inventory = () => {
                     <td className="px-6 py-4 text-sm text-gray-600">{medicine.category}</td>
                     <td className="px-6 py-4 text-sm text-gray-600 font-mono">{medicine.batchNumber}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                        expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
+                          expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                        }`}>
                         {medicine.expiryDate} ({expiryStatus.days}d)
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold">{medicine.quantity}</td>
                     <td className="px-6 py-4 text-sm font-mono font-semibold">{medicine.rackNumber}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                        stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
+                          stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                        }`}>
                         {stockStatus.label}
                       </span>
                     </td>

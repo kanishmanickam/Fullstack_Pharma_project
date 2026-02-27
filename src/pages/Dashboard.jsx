@@ -1,10 +1,35 @@
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { medicines, notifications } from '../data/mockData';
+import axiosInstance from '../utils/axiosConfig';
 import { calculateKPIs, getExpiryStatus, getStockStatus, sortByFEFO } from '../utils/helpers';
 import { FaBoxes, FaExclamationTriangle, FaClock, FaTimesCircle, FaBell } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
+  const [medicines, setMedicines] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [medicinesRes, notificationsRes] = await Promise.all([
+          axiosInstance.get('/inventory'),
+          axiosInstance.get('/notifications').catch(() => ({ data: { notifications: [] } }))
+          // Catch notifications error specifically so the dashboard still loads if alerts/notifications aren't fully implemented yet
+        ]);
+
+        setMedicines(medicinesRes.data.data || []);
+        setNotifications(notificationsRes.data.notifications || []);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
   const kpis = calculateKPIs(medicines);
   const fefoMedicines = sortByFEFO(medicines).slice(0, 5);
   const recentNotifications = notifications.slice(0, 4);
@@ -64,10 +89,14 @@ const Dashboard = () => {
               FEFO Priority (First Expiry First Out)
             </h2>
             <div className="space-y-3">
-              {fefoMedicines.map((medicine) => {
+              {loading ? (
+                <p className="text-gray-500 text-sm">Loading priority medicines...</p>
+              ) : fefoMedicines.length === 0 ? (
+                <p className="text-gray-500 text-sm">No medicines found</p>
+              ) : fefoMedicines.map((medicine) => {
                 const expiryStatus = getExpiryStatus(medicine.expiryDate);
                 const stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
-                
+
                 return (
                   <div key={medicine.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -75,20 +104,18 @@ const Dashboard = () => {
                         <p className="font-semibold text-gray-900">{medicine.name}</p>
                         <p className="text-sm text-gray-500">Batch: {medicine.batchNumber} | Rack: {medicine.rackNumber}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                        expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
+                          expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                        }`}>
                         {expiryStatus.days}d left
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                        stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
+                          stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                        }`}>
                         {stockStatus.label}
                       </span>
                       <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
@@ -111,12 +138,15 @@ const Dashboard = () => {
               Recent Notifications
             </h2>
             <div className="space-y-3">
-              {recentNotifications.map((notif) => (
-                <div key={notif.id} className={`border-l-4 p-4 rounded ${
-                  notif.priority === 'high' ? 'border-red-500 bg-red-50' :
-                  notif.priority === 'medium' ? 'border-yellow-500 bg-yellow-50' :
-                  'border-blue-500 bg-blue-50'
-                }`}>
+              {loading ? (
+                <p className="text-gray-500 text-sm">Loading notifications...</p>
+              ) : recentNotifications.length === 0 ? (
+                <p className="text-gray-500 text-sm">No recent notifications</p>
+              ) : recentNotifications.map((notif) => (
+                <div key={notif.id} className={`border-l-4 p-4 rounded ${notif.priority === 'high' ? 'border-red-500 bg-red-50' :
+                    notif.priority === 'medium' ? 'border-yellow-500 bg-yellow-50' :
+                      'border-blue-500 bg-blue-50'
+                  }`}>
                   <p className="font-semibold text-gray-900 text-sm">{notif.title}</p>
                   <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
                   <p className="text-xs text-gray-500 mt-2">{new Date(notif.date).toLocaleString()}</p>

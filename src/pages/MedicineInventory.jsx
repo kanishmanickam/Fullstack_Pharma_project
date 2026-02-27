@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import axios from 'axios';
 import dayjs from 'dayjs';
+import axiosInstance from '../utils/axiosConfig';
 
 // MUI imports
 import {
@@ -41,7 +41,6 @@ import {
     FaPills,
 } from 'react-icons/fa';
 
-const API_BASE = 'http://localhost:5000/api';
 const CATEGORIES = [
     'Tablet',
     'Capsule',
@@ -67,6 +66,7 @@ const MedicineInventory = () => {
     // ── state ──────────────────────────────────────────────
     const [form, setForm] = useState(emptyForm);
     const [medicines, setMedicines] = useState([]);
+    const [allMedicines, setAllMedicines] = useState([]); // keep full list for searches
     const [suppliers, setSuppliers] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRow, setSelectedRow] = useState(null);
@@ -79,31 +79,45 @@ const MedicineInventory = () => {
     // snackbar
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    const token = localStorage.getItem('medistock_token');
-    const headers = { Authorization: `Bearer ${token}` };
+
+    // Convert API records to the shape expected by the grid
+    const convertRecordToRow = (m) => ({
+        _id: String(m._id),
+        medicineId: m.medicineId || m.batchNumber || m._id, // fallback based on schema fields
+        name: m.name,
+        category: m.category,
+        unitPrice: m.unitPrice !== undefined ? m.unitPrice : m.price,
+        stockQuantity: m.stockQuantity !== undefined ? m.stockQuantity : m.quantity,
+        expiryDate: m.expiryDate,
+        supplierId: m.supplier || null,
+    });
 
     // ── data fetchers ──────────────────────────────────────
     const fetchMedicines = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await axios.get(`${API_BASE}/medicine-inv`, { headers });
-            setMedicines(res.data.medicines || []);
-        } catch (err) {
-            console.error('Fetch medicines error:', err);
-            showSnackbar('Failed to fetch medicines', 'error');
+            const res = await axiosInstance.get('/medicines');
+            const data = Array.isArray(res.data) ? res.data : (res.data.medicines || []);
+            const rows = data.map(convertRecordToRow);
+            setAllMedicines(rows);
+            setMedicines(rows);
+        } catch (error) {
+            console.error('Failed to fetch medicines:', error);
+            showSnackbar('Failed to fetch medicine inventory', 'error');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [showSnackbar]);
 
     const fetchSuppliers = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_BASE}/suppliers`, { headers });
-            setSuppliers(res.data.suppliers || []);
-        } catch (err) {
-            console.error('Fetch suppliers error:', err);
+            const res = await axiosInstance.get('/suppliers');
+            setSuppliers(Array.isArray(res.data) ? res.data : (res.data.data || []));
+        } catch (error) {
+            console.error('Failed to fetch suppliers:', error);
+            showSnackbar('Failed to fetch suppliers list', 'error');
         }
-    }, []);
+    }, [showSnackbar]);
 
     useEffect(() => {
         fetchMedicines();
@@ -131,15 +145,22 @@ const MedicineInventory = () => {
             fetchMedicines();
             return;
         }
+
         try {
             setLoading(true);
-            const res = await axios.get(`${API_BASE}/medicine-inv/search`, {
-                headers,
-                params: { query: searchQuery },
-            });
-            setMedicines(res.data.medicines || []);
-        } catch (err) {
-            showSnackbar('Search failed', 'error');
+            const res = await axiosInstance.get(`/medicines/search/${searchQuery}`);
+            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+            const rows = data.map(convertRecordToRow);
+
+            if (rows.length === 0) {
+                showSnackbar('No medicines found matching your search', 'info');
+            } else {
+                showSnackbar(`Found ${rows.length} medicine(s)`, 'success');
+            }
+            setMedicines(rows);
+        } catch (error) {
+            console.error('Search failed:', error);
+            showSnackbar('Error occurred while searching', 'error');
         } finally {
             setLoading(false);
         }
@@ -206,29 +227,35 @@ const MedicineInventory = () => {
         const { type } = dialog;
         setDialog({ ...dialog, open: false });
 
-        const payload = {
-            ...form,
+        const standardized = {
+            medicineId: form.medicineId,
+            name: form.name,
+            category: form.category,
             unitPrice: Number(form.unitPrice),
             stockQuantity: Number(form.stockQuantity),
             expiryDate: form.expiryDate ? dayjs(form.expiryDate).toISOString() : null,
+            supplier: form.supplierId, // send supplier ID as 'supplier' based on API schema
         };
 
         try {
+            setLoading(true);
             if (type === 'insert') {
-                await axios.post(`${API_BASE}/medicine-inv`, payload, { headers });
+                await axiosInstance.post('/medicines', standardized);
                 showSnackbar('Medicine added successfully');
             } else if (type === 'update') {
-                await axios.put(`${API_BASE}/medicine-inv/${form.medicineId}`, payload, { headers });
+                await axiosInstance.put(`/medicines/${selectedRow._id}`, standardized);
                 showSnackbar('Medicine updated successfully');
             } else if (type === 'delete') {
-                await axios.delete(`${API_BASE}/medicine-inv/${form.medicineId}`, { headers });
+                await axiosInstance.delete(`/medicines/${selectedRow._id}`);
                 showSnackbar('Medicine deleted successfully');
             }
+            fetchMedicines(); // Refresh grid after operation
             resetForm();
-            fetchMedicines();
-        } catch (err) {
-            const msg = err.response?.data?.message || 'Operation failed';
-            showSnackbar(msg, 'error');
+        } catch (error) {
+            console.error(`Operation ${type} failed:`, error);
+            showSnackbar(error.response?.data?.message || `Failed to ${type} medicine`, 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -292,6 +319,7 @@ const MedicineInventory = () => {
         expiryDate: m.expiryDate,
         supplierName: m.supplierId?.name || 'N/A',
         supplierObjId: m.supplierId?._id || '',
+        _id: m._id
     }));
 
     // ── render ─────────────────────────────────────────────
@@ -327,7 +355,12 @@ const MedicineInventory = () => {
                                 placeholder="Enter Medicine ID to search..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleSearch();
+                                    }
+                                }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">

@@ -1,8 +1,9 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers, 
-  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave 
+import {
+  FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers,
+  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills
+
 } from 'react-icons/fa';
 import { useState } from 'react';
 import Chatbot from './Chatbot';
@@ -21,6 +22,7 @@ const Layout = ({ children }) => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <FaTachometerAlt />, roles: ['owner', 'staff'] },
     { path: '/inventory', label: 'Inventory', icon: <FaBoxes />, roles: ['owner', 'staff'] },
+    { path: '/medicine-inventory', label: 'Medicine Inventory', icon: <FaPills />, roles: ['owner', 'staff'] },
     { path: '/billing', label: 'Billing', icon: <FaFileInvoice />, roles: ['owner', 'staff'] },
     { path: '/customers', label: 'Customers', icon: <FaUsers />, roles: ['owner', 'staff'] },
     { path: '/excel-upload', label: 'Excel Upload', icon: <FaFileUpload />, roles: ['owner', 'staff'] },
@@ -29,7 +31,7 @@ const Layout = ({ children }) => {
     { path: '/financial-reports', label: 'Financial Reports', icon: <FaMoneyBillWave />, roles: ['owner'] },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     item.roles.includes(currentUser?.role)
   );
 
@@ -49,11 +51,10 @@ const Layout = ({ children }) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
-                location.pathname === item.path
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${location.pathname === item.path
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 hover:bg-gray-100'
+                }`}
             >
               <span className="text-xl">{item.icon}</span>
               <span className="font-medium">{item.label}</span>

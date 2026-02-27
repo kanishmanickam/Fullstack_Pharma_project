@@ -16,7 +16,7 @@ const seedDatabase = async () => {
     await Customer.deleteMany({});
 
     // Seed users
-    const users = await User.insertMany([
+    const userData = [
       {
         username: 'admin',
         email: 'admin@medistock.com',
@@ -35,7 +35,13 @@ const seedDatabase = async () => {
         password: 'customer123',
         role: 'customer',
       },
-    ]);
+    ];
+
+    const users = [];
+    for (const u of userData) {
+      const createdUser = await User.create(u);
+      users.push(createdUser);
+    }
 
     console.log('✓ Users seeded');
 

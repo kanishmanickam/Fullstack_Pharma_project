@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import axiosInstance from '../utils/axiosConfig';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +12,7 @@ export const AuthProvider = ({ children }) => {
     // Check if user is logged in (from localStorage)
     const savedUser = localStorage.getItem('medistock_user');
     const savedToken = localStorage.getItem('medistock_token');
-    
+
     if (savedUser && savedToken) {
       setCurrentUser(JSON.parse(savedUser));
       setToken(savedToken);
@@ -22,28 +23,21 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       setLoading(true);
-      
-      // Temporary mock login for testing
-      const mockUsers = [
-        { id: 1, username: 'admin', password: 'admin123', role: 'owner', email: 'admin@medistock.com' },
-        { id: 2, username: 'staff', password: 'staff123', role: 'staff', email: 'staff@medistock.com' },
-        { id: 3, username: 'customer', password: 'customer123', role: 'customer', email: 'customer@medistock.com' },
-      ];
-      
-      const user = mockUsers.find(u => u.username === username && u.password === password);
-      
-      if (user) {
-        const { password: _, ...userWithoutPassword } = user;
-        setCurrentUser(userWithoutPassword);
-        setToken('mock-token-123');
-        localStorage.setItem('medistock_user', JSON.stringify(userWithoutPassword));
-        localStorage.setItem('medistock_token', 'mock-token-123');
-        return { success: true, user: userWithoutPassword };
+
+      const res = await axiosInstance.post('/auth/login', { username, password });
+
+      if (res.data.success) {
+        const { user, token } = res.data;
+        setCurrentUser(user);
+        setToken(token);
+        localStorage.setItem('medistock_user', JSON.stringify(user));
+        localStorage.setItem('medistock_token', token);
+        return { success: true, user: user };
       }
-      
+
       return { success: false, message: 'Invalid credentials' };
     } catch (error) {
-      return { success: false, message: 'Login failed' };
+      return { success: false, message: error.response?.data?.message || 'Login failed' };
     } finally {
       setLoading(false);
     }

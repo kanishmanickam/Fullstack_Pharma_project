@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { medicines, customers } from '../data/mockData';
+import axiosInstance from '../utils/axiosConfig';
 import { formatCurrency, sortByFEFO } from '../utils/helpers';
 import { FaSearch, FaTrash, FaCheck, FaMicrophone, FaStop, FaPlus, FaEdit, FaTimesCircle } from 'react-icons/fa';
 
@@ -19,6 +19,10 @@ const Billing = () => {
   const [recognition, setRecognition] = useState(null);
   const [editingItem, setEditingItem] = useState(null); // Track which item is being edited
   const [editQuantity, setEditQuantity] = useState(1);
+
+  const [medicines, setMedicines] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -58,6 +62,25 @@ const Billing = () => {
     }
   }, [voiceMode]);
 
+  // Fetch billing data (Medicines and Customers from API)
+  useEffect(() => {
+    const fetchBillingData = async () => {
+      try {
+        const [medicinesRes, customersRes] = await Promise.all([
+          axiosInstance.get('/inventory'),
+          axiosInstance.get('/customers')
+        ]);
+        setMedicines(medicinesRes.data.data || []);
+        setCustomers(customersRes.data.customers || []);
+      } catch (error) {
+        console.error('Failed to fetch billing data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBillingData();
+  }, []);
+
   // Start voice input
   const startVoiceInput = (mode) => {
     if (recognition) {
@@ -94,7 +117,7 @@ const Billing = () => {
     }
 
     const existingItem = billItems.find(item => item.medicineId === selectedMedicine.id);
-    
+
     if (existingItem) {
       // Update quantity if medicine already in bill
       setBillItems(billItems.map(item =>
@@ -149,7 +172,7 @@ const Billing = () => {
       }
       return item;
     }));
-    
+
     setEditingItem(null);
     setEditQuantity(1);
   };
@@ -166,35 +189,54 @@ const Billing = () => {
   const grandTotal = subtotal + tax;
 
   // Process payment
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (billItems.length === 0) {
       return;
     }
 
-    const newBill = {
-      id: Math.floor(Math.random() * 10000),
-      date: new Date().toISOString(),
+    const payload = {
       customerType,
+      customerId: customerType === 'regular' && selectedCustomer ? selectedCustomer._id : null,
       customerName: customerType === 'regular' && selectedCustomer ? selectedCustomer.name : 'Walking Customer',
-      items: billItems,
+      items: billItems.map(item => ({
+        medicineId: item.medicineId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total
+      })),
       subtotal,
       tax,
-      total: grandTotal,
+      totalAmount: grandTotal,
       paymentMethod
     };
 
-    setCurrentBill(newBill);
-    setShowPaymentSuccess(true);
+    try {
+      const res = await axiosInstance.post('/billing', payload);
 
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setBillItems([]);
-      setCustomerType('walking');
-      setSelectedCustomer(null);
-      setPaymentMethod('cash');
-      setShowPaymentSuccess(false);
-      setCurrentBill(null);
-    }, 3000);
+      setCurrentBill({
+        id: res.data.bill._id,
+        date: res.data.bill.createdAt || new Date().toISOString(),
+        customerType: res.data.bill.customerType || customerType,
+        customerName: res.data.bill.customerName || payload.customerName,
+        total: res.data.bill.totalAmount,
+        paymentMethod: res.data.bill.paymentMethod
+      });
+      setShowPaymentSuccess(true);
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setBillItems([]);
+        setCustomerType('walking');
+        setSelectedCustomer(null);
+        setPaymentMethod('cash');
+        setShowPaymentSuccess(false);
+        setCurrentBill(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      alert('Failed to process payment. ' + (error.response?.data?.message || ''));
+    }
   };
 
   // Payment success screen
@@ -210,7 +252,7 @@ const Billing = () => {
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h2>
             <p className="text-gray-600 mb-6">Transaction completed successfully</p>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl mb-6">
               <div className="flex justify-between mb-3">
                 <span className="text-gray-600">Bill ID:</span>
@@ -258,28 +300,26 @@ const Billing = () => {
           {/* Left Section - Medicine Selection */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Select Medicine</h2>
-            
+
             {/* Customer Type Selection */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Customer Type</label>
               <div className="flex gap-4">
                 <button
                   onClick={() => setCustomerType('walking')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
-                    customerType === 'walking'
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
-                  }`}
+                  className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${customerType === 'walking'
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
+                    }`}
                 >
                   Walking Customer
                 </button>
                 <button
                   onClick={() => setCustomerType('regular')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
-                    customerType === 'regular'
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
-                  }`}
+                  className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${customerType === 'regular'
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
+                    }`}
                 >
                   Regular Customer
                 </button>
@@ -297,7 +337,7 @@ const Billing = () => {
                 >
                   <option value="">Choose a customer</option>
                   {customers.filter(c => c.type === 'regular').map(customer => (
-                    <option key={customer.id} value={customer.id}>
+                    <option key={customer._id} value={customer._id}>
                       {customer.name} - {customer.phone}
                     </option>
                   ))}
@@ -319,11 +359,10 @@ const Billing = () => {
                 />
                 <button
                   onClick={() => isListening && voiceMode === 'search' ? stopVoiceInput() : startVoiceInput('search')}
-                  className={`absolute right-2 top-2 p-2 rounded-lg transition-colors ${
-                    isListening && voiceMode === 'search'
+                  className={`absolute right-2 top-2 p-2 rounded-lg transition-colors ${isListening && voiceMode === 'search'
                       ? 'bg-red-500 text-white animate-pulse'
                       : 'bg-primary-600 text-white hover:bg-primary-700'
-                  }`}
+                    }`}
                   title={isListening && voiceMode === 'search' ? 'Stop voice input' : 'Voice search'}
                 >
                   {isListening && voiceMode === 'search' ? <FaStop /> : <FaMicrophone />}
@@ -337,13 +376,15 @@ const Billing = () => {
             {/* Medicine List */}
             {searchTerm && (
               <div className="mb-4 max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
-                {filteredMedicines.length === 0 ? (
+                {loading ? (
+                  <p className="p-4 text-gray-500 text-center">Loading medicines...</p>
+                ) : filteredMedicines.length === 0 ? (
                   <p className="p-4 text-gray-500 text-center">No medicines found</p>
                 ) : (
                   <div className="divide-y">
                     {sortByFEFO(filteredMedicines).map(medicine => (
                       <button
-                        key={medicine.id}
+                        key={medicine._id || medicine.id}
                         onClick={() => {
                           setSelectedMedicine(medicine);
                           setSearchTerm('');
@@ -395,7 +436,7 @@ const Billing = () => {
                     <span className="ml-2 font-semibold">{selectedMedicine.quantity}</span>
                   </div>
                 </div>
-                
+
                 {/* Quantity Input */}
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -411,11 +452,10 @@ const Billing = () => {
                       />
                       <button
                         onClick={() => isListening && voiceMode === 'quantity' ? stopVoiceInput() : startVoiceInput('quantity')}
-                        className={`absolute right-2 top-2 p-1.5 rounded transition-colors ${
-                          isListening && voiceMode === 'quantity'
+                        className={`absolute right-2 top-2 p-1.5 rounded transition-colors ${isListening && voiceMode === 'quantity'
                             ? 'bg-red-500 text-white animate-pulse'
                             : 'bg-primary-600 text-white hover:bg-primary-700'
-                        }`}
+                          }`}
                         title={isListening && voiceMode === 'quantity' ? 'Stop voice input' : 'Voice quantity'}
                       >
                         {isListening && voiceMode === 'quantity' ? <FaStop size={12} /> : <FaMicrophone size={12} />}
@@ -481,7 +521,7 @@ const Billing = () => {
                             </div>
                             <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">EDITING</span>
                           </div>
-                          
+
                           <div className="flex gap-2 items-end">
                             <div className="flex-1">
                               <label className="text-xs text-gray-600 block mb-1">Update Quantity</label>
@@ -509,7 +549,7 @@ const Billing = () => {
                               Cancel
                             </button>
                           </div>
-                          
+
                           <div className="text-xs text-gray-500">
                             New Total: {formatCurrency(item.price * editQuantity)}
                           </div>
@@ -557,7 +597,7 @@ const Billing = () => {
                   ))}
                 </div>
               )}
-              
+
               {/* CRUD Operations Legend */}
               {billItems.length > 0 && (
                 <div className="mt-3 p-2 bg-gray-100 rounded text-xs space-y-1">
@@ -596,21 +636,19 @@ const Billing = () => {
                   <div className="flex gap-4">
                     <button
                       onClick={() => setPaymentMethod('cash')}
-                      className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
-                        paymentMethod === 'cash'
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
-                      }`}
+                      className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${paymentMethod === 'cash'
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
+                        }`}
                     >
                       Cash
                     </button>
                     <button
                       onClick={() => setPaymentMethod('gpay')}
-                      className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
-                        paymentMethod === 'gpay'
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
-                      }`}
+                      className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${paymentMethod === 'gpay'
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-primary-600'
+                        }`}
                     >
                       GPay
                     </button>

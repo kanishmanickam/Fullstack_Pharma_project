@@ -44,7 +44,6 @@ const Chatbot = ({ onClose }) => {
 
       recognitionInstance.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        alert(`Speech recognition error: ${event.error}. Make sure you're speaking clearly in ${language === 'ta' ? 'Tamil' : 'English'}.`);
         setIsListening(false);
       };
 
@@ -140,7 +139,7 @@ const Chatbot = ({ onClose }) => {
         setIsListening(false);
       }
     } else {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      console.warn('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
     }
   };
 

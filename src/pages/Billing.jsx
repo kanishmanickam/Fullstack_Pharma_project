@@ -65,7 +65,7 @@ const Billing = () => {
       setIsListening(true);
       recognition.start();
     } else {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      console.warn('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
     }
   };
 
@@ -90,7 +90,6 @@ const Billing = () => {
 
     // Check if enough stock
     if (quantity > selectedMedicine.quantity) {
-      alert(`Not enough stock! Available: ${selectedMedicine.quantity}`);
       return;
     }
 
@@ -122,27 +121,21 @@ const Billing = () => {
     setSelectedMedicine(null);
     setQuantity(1);
     setSearchTerm('');
-    alert('Item added to bill successfully! ✅');
   };
 
   // Remove item from bill (DELETE operation)
   const handleRemoveItem = (medicineId) => {
-    if (window.confirm('Are you sure you want to remove this item?')) {
-      setBillItems(billItems.filter(item => item.medicineId !== medicineId));
-      alert('Item deleted successfully! ✅');
-    }
+    setBillItems(billItems.filter(item => item.medicineId !== medicineId));
   };
 
   // Update item quantity (UPDATE operation)
   const handleUpdateItem = (medicineId) => {
     if (editQuantity <= 0) {
-      alert('Quantity must be greater than 0');
       return;
     }
 
     const medicine = medicines.find(m => m.id === medicineId);
     if (editQuantity > medicine.quantity) {
-      alert(`Not enough stock! Available: ${medicine.quantity}`);
       return;
     }
 
@@ -159,7 +152,6 @@ const Billing = () => {
     
     setEditingItem(null);
     setEditQuantity(1);
-    alert('Item updated successfully! ✅');
   };
 
   // Cancel edit
@@ -176,7 +168,6 @@ const Billing = () => {
   // Process payment
   const handlePayment = () => {
     if (billItems.length === 0) {
-      alert('Please add items to the bill first!');
       return;
     }
 

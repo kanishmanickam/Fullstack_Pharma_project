@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaTimes, FaMicrophone, FaStop, FaLanguage, FaPaperPlane } from 'react-icons/fa';
+import { FaTimes, FaMicrophone, FaStop, FaLanguage, FaPaperPlane, FaSpinner } from 'react-icons/fa';
 import { speakTamil, speakEnglish, stopSpeech, isTamilVoiceAvailable } from '../utils/tamilTTS';
+import { getSmartResponse } from '../utils/geminiAPI';
 
 const Chatbot = ({ onClose }) => {
   const [messages, setMessages] = useState([
@@ -10,6 +11,7 @@ const Chatbot = ({ onClose }) => {
   const [language, setLanguage] = useState('en');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const messagesEndRef = useRef(null);
 
@@ -178,38 +180,57 @@ const Chatbot = ({ onClose }) => {
     }
   };
 
-  const handleSend = (text = input) => {
+  const handleSend = async (text = input) => {
     const messageText = text || input;
     if (!messageText.trim()) return;
 
     const userMessage = { id: messages.length + 1, text: messageText, sender: 'user' };
     setMessages([...messages, userMessage]);
+    setIsLoading(true);
 
-    // Enhanced keyword matching with multiple keywords per response
-    const lowerInput = messageText.toLowerCase();
-    const responses = predefinedResponses[language];
-    let response = responses.default;
+    try {
+      // Get smart response from Gemini API with predefined fallback
+      const response = await getSmartResponse(messageText, language, predefinedResponses);
 
-    // Check each key in responses for matching keywords
-    for (const [key, value] of Object.entries(responses)) {
-      if (key === 'default') continue;
-      
-      const keywords = key.split('|');
-      if (keywords.some(keyword => lowerInput.includes(keyword.toLowerCase()))) {
-        response = value;
-        break;
+      setIsLoading(false);
+
+      if (response) {
+        setTimeout(() => {
+          const botMessage = { id: messages.length + 2, text: response, sender: 'bot' };
+          setMessages(prev => [...prev, botMessage]);
+          
+          // Auto-speak response if not already speaking
+          if (!isSpeaking) {
+            speak(response);
+          }
+        }, 300);
       }
+    } catch (error) {
+      console.error('Error getting response:', error);
+      setIsLoading(false);
+      
+      // Fallback to predefined response on error
+      const responses = predefinedResponses[language];
+      let fallbackResponse = responses.default;
+      
+      const lowerInput = messageText.toLowerCase();
+      for (const [key, value] of Object.entries(responses)) {
+        if (key === 'default') continue;
+        const keywords = key.split('|');
+        if (keywords.some(keyword => lowerInput.includes(keyword.toLowerCase()))) {
+          fallbackResponse = value;
+          break;
+        }
+      }
+
+      setTimeout(() => {
+        const botMessage = { id: messages.length + 2, text: fallbackResponse, sender: 'bot' };
+        setMessages(prev => [...prev, botMessage]);
+        if (!isSpeaking) {
+          speak(fallbackResponse);
+        }
+      }, 300);
     }
-
-    setTimeout(() => {
-      const botMessage = { id: messages.length + 2, text: response, sender: 'bot' };
-      setMessages(prev => [...prev, botMessage]);
-      
-      // Auto-speak response if not already speaking
-      if (!isSpeaking) {
-        speak(response);
-      }
-    }, 500);
 
     setInput('');
   };
@@ -264,12 +285,18 @@ const Chatbot = ({ onClose }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Voice Status */}
-      {(isListening || isSpeaking) && (
+      {/* Voice Status & Loading */}
+      {(isListening || isSpeaking || isLoading) && (
         <div className="px-4 py-2 bg-primary-50 border-t border-primary-200">
-          <p className="text-sm text-primary-600">
+          <p className="text-sm text-primary-600 flex items-center gap-2">
             {isListening && '🎤 Listening...'}
             {isSpeaking && '🔊 Speaking...'}
+            {isLoading && (
+              <>
+                <FaSpinner className="animate-spin" />
+                <span>Thinking...</span>
+              </>
+            )}
           </p>
         </div>
       )}
@@ -281,17 +308,17 @@ const Chatbot = ({ onClose }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isListening ? 'Listening...' : 'Ask about inventory...'}
-            disabled={isListening}
+            onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSend()}
+            placeholder={isListening ? 'Listening...' : isLoading ? 'Processing...' : 'Ask about inventory...'}
+            disabled={isListening || isLoading}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
           />
           <button
             onClick={() => handleSend()}
             className="bg-primary-600 text-white p-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-            disabled={isListening}
+            disabled={isListening || isLoading}
           >
-            <FaPaperPlane />
+            {isLoading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
           </button>
           <button
             onClick={isListening ? stopVoiceInput : startVoiceInput}
@@ -300,6 +327,7 @@ const Chatbot = ({ onClose }) => {
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'bg-primary-600 text-white hover:bg-primary-700'
             }`}
+            disabled={isLoading}
           >
             {isListening ? <FaStop /> : <FaMicrophone />}
           </button>

@@ -12,6 +12,7 @@ const Chatbot = ({ onClose }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVoiceInput, setIsVoiceInput] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const messagesEndRef = useRef(null);
 
@@ -36,6 +37,7 @@ const Chatbot = ({ onClose }) => {
         console.log(`Recognized text (${language}):`, transcript);
         setInput(transcript);
         setIsListening(false);
+        setIsVoiceInput(true);
         // Auto-send after voice input
         setTimeout(() => handleSend(transcript), 500);
       };
@@ -150,36 +152,6 @@ const Chatbot = ({ onClose }) => {
     }
   };
 
-  const predefinedResponses = {
-    en: {
-      'stock|inventory|how many': 'You have 8 medicines in your inventory. Top items: Paracetamol (45 units), Aspirin (32 units), Ibuprofen (28 units). 3 medicines are at low stock and need reordering soon.',
-      'expiry|expire|expired|shelf life': 'There are 2 medicines expiring within 30 days:\n• Cough Syrup - expires 2024-03-15\n• Vitamin B Complex - expires 2024-03-20\nUse FEFO (First Expiry, First Out) method for these.',
-      'paracetamol|acetaminophen': 'Paracetamol 500mg:\n• Quantity: 45 units\n• Rack Location: A1\n• Expiry Date: 2024-03-15\n• Status: Low Stock ⚠️\n• Price: ₹12/unit',
-      'aspirin': 'Aspirin 500mg:\n• Quantity: 32 units\n• Rack Location: B2\n• Expiry Date: 2024-06-20\n• Status: Adequate Stock ✓\n• Price: ₹8/unit',
-      'ibuprofen': 'Ibuprofen 200mg:\n• Quantity: 28 units\n• Rack Location: C3\n• Expiry Date: 2024-05-10\n• Status: Adequate Stock ✓\n• Price: ₹15/unit',
-      'low stock|reorder|need to order': 'Low Stock Items Requiring Reorder:\n1. Paracetamol 500mg - 45 units (Critical)\n2. Vitamin B Complex - 12 units (Warning)\n3. Cough Syrup - 8 units (Critical)\n\nRecommended action: Place reorder immediately.',
-      'rack|location|where': 'Medicine Rack Locations:\n• A1: Paracetamol, Aspirin\n• B2: Ibuprofen, Vitamin C\n• C3: Cough Syrup, Antacid\n• D1: Injectable Medications\n• D2: Topical Creams\n\nUse this for quick medicine location.',
-      'price|cost|how much': 'Current Medicine Prices:\n• Paracetamol: ₹12/unit\n• Aspirin: ₹8/unit\n• Ibuprofen: ₹15/unit\n• Vitamin C: ₹10/unit\n• Cough Syrup: ₹45/bottle\n\nPrices may vary by supplier.',
-      'sales|sold|revenue|order': 'Total Sales Today: ₹2,450\nTop Selling: Paracetamol (12 units), Aspirin (8 units)\nAverage Transaction: ₹98\n\nView Financial Reports for detailed analytics.',
-      'help|what can you|what do you': 'I can help you with:\n✓ Check stock levels & inventory\n✓ Find specific medicines\n✓ Expiry date information\n✓ Rack & storage locations\n✓ Medicine prices\n✓ Reordering recommendations\n✓ Sales & revenue data\n✓ Low stock alerts\n\nAsk me anything about your pharmacy!',
-      'hello|hi|hey|good morning|good afternoon': 'Hello! 👋 Welcome to MediStock AI. I\'m here to help with your pharmacy inventory. You can ask me about stock levels, medicines, prices, or anything else inventory-related!',
-      'thank|thanks': 'You\'re welcome! 😊 Feel free to ask if you need any more information about your inventory.',
-      'default': 'That\'s an interesting question! I can help you with:\n• Stock levels & inventory status\n• Specific medicine information\n• Expiry dates & FEFO recommendations\n• Rack locations\n• Pricing information\n• Low stock alerts\n• Sales data\n\nPlease ask me about any of these topics or rephrase your question.'
-    },
-    ta: {
-      'stock|inventory|how many|சரக்கு|எத்தனை': 'உங்கள் சரக்குகளில் 8 மருந்துகள் உள்ளன. முக்கிய உருப்பொருட்கள்: பாராசிட்டமால் (45 அலகுகள்), ஆஸ்பிரின் (32 அலகுகள்), இபுப்রோஃபன் (28 அலகுகள்). 3 மருந்துகள் குறைந்த சரக்கு நிலையில் உள்ளன.',
-      'expiry|expire|expired|काலाവदhi|சாய': '30 நாட்களுக்குள் காலாவதியாகும் 2 மருந்துகள்:\n• இருமல் சிரப் - 2024-03-15\n• வைட்டமின் பி காம்ப்ளெக்ஸ் - 2024-03-20\nFEFO முறையைப் பயன்படுத்தவும்.',
-      'paracetamol|பாராசிட்டமால்': 'பாராசிட்டமால் 500mg:\n• அளவு: 45 அலகுகள்\n• ரேக் இடம்: A1\n• சாய்க்கட்டி நாள்: 2024-03-15\n• நிலை: குறைந்த சரக்கு ⚠️\n• விலை: ₹12/அலகு',
-      'aspirin|ஆஸ்பிரின்': 'ஆஸ்பிரின் 500mg:\n• அளவு: 32 அலகுகள்\n• ரேக் இடம்: B2\n• சாய்க்கட்டி நாள்: 2024-06-20\n• நிலை: போதுமான சரக்கு ✓\n• விலை: ₹8/அலகு',
-      'low stock|reorder|குறைந்த சரக்கு|மறு ஆர்டர்': 'மறு ஆர்டர் தேவைப்படும் குறைந்த சரக்கு உருப்பொருட்கள்:\n1. பாராசிட்டமால் 500mg - 45 அலகுகள் (விமர்சன)\n2. வைட்டமின் பி - 12 அலகுகள்\n3. இருமல் சிரப் - 8 அலகுகள்\n\nசிபாரிசு: உடனே மறு ஆர்டர் செய்யவும்.',
-      'price|விலை|எவ்வளவு': 'தற்போதைய மருந்து விலைகள்:\n• பாராசிட்டமால்: ₹12/அலகு\n• ஆஸ்பிரின்: ₹8/அலகு\n• இபுப்ரோஃபன்: ₹15/அலகு\n• வைட்டமின் சி: ₹10/அலகு\n• இருமல் சிரப்: ₹45/பாட்டில்',
-      'help|உதவி|நீ என்ன': 'நான் உங்களுக்கு உதவ முடியும்:\n✓ சரக்கு நிலைகளை சரிபார்க்கவும்\n✓ குறிப்பிட்ட மருந்துகளைக் கண்டறியவும்\n✓ சாய்ப்பு தேதி தகவல்\n✓ ரேக் இடங்கள்\n✓ மருந்து விலைகள்\n✓ மறு ஆர்டர் சிபாரிசுகள்\n✓ விற்பனை தரவு\n\nআপনার மருந்தகம் பற்றி எதைப்பற்றியும் கேளுங்கள்!',
-      'hello|hi|नमस्ते|வணக்கம்': 'வணக்கம்! 👋 MediStock AI க்கு வரவேற்கிறேன். உங்கள் ஔஷதக் கடைக்கு நான் உங்களுக்கு உதவ இங்கே இருக்கிறேன்!',
-      'thank|நன்றி': 'நல்லது! 😊 உங்கள் சரக்கு பற்றி மேலும் தகவல் தேவைப்பட்டால் கேளுங்கள்.',
-      'default': 'அது ஒரு சுவாரஸ்யமான கேள்வி! நான் உங்களுக்கு உதவ முடியும்:\n• சரக்கு நிலை\n• மருந்து தகவல்\n• சாய் நாள்\n• ரேக் இடங்கள்\n• விலைகள்\n• குறைந்த சரக்கு எச்சரிக்கைகள்\n\nதயவு செய்து மீண்டும் கேளுங்கள் அல்லது உங்கள் கேள்வியை மாற்றி கேளுங்கள்.'
-    }
-  };
-
   const handleSend = async (text = input) => {
     const messageText = text || input;
     if (!messageText.trim()) return;
@@ -189,8 +161,8 @@ const Chatbot = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      // Get smart response from Gemini API with predefined fallback
-      const response = await getSmartResponse(messageText, language, predefinedResponses);
+      // Get smart response from Gemini API only
+      const response = await getSmartResponse(messageText, language, null);
 
       setIsLoading(false);
 
@@ -199,8 +171,8 @@ const Chatbot = ({ onClose }) => {
           const botMessage = { id: messages.length + 2, text: response, sender: 'bot' };
           setMessages(prev => [...prev, botMessage]);
           
-          // Auto-speak response if not already speaking
-          if (!isSpeaking) {
+          // Only speak if input was from voice
+          if (isVoiceInput && !isSpeaking) {
             speak(response);
           }
         }, 300);
@@ -209,30 +181,22 @@ const Chatbot = ({ onClose }) => {
       console.error('Error getting response:', error);
       setIsLoading(false);
       
-      // Fallback to predefined response on error
-      const responses = predefinedResponses[language];
-      let fallbackResponse = responses.default;
-      
-      const lowerInput = messageText.toLowerCase();
-      for (const [key, value] of Object.entries(responses)) {
-        if (key === 'default') continue;
-        const keywords = key.split('|');
-        if (keywords.some(keyword => lowerInput.includes(keyword.toLowerCase()))) {
-          fallbackResponse = value;
-          break;
-        }
-      }
+      // Fallback message on error
+      const errorMessage = language === 'ta' 
+        ? 'மன்னிக்கவும், நான் இப்போது உங்களுக்கு உதவ முடியவில்லை. தயவு செய்து மீண்டும் முயற்சிக்கவும்.'
+        : 'Sorry, I couldn\'t process that. Please try again.';
 
       setTimeout(() => {
-        const botMessage = { id: messages.length + 2, text: fallbackResponse, sender: 'bot' };
+        const botMessage = { id: messages.length + 2, text: errorMessage, sender: 'bot' };
         setMessages(prev => [...prev, botMessage]);
-        if (!isSpeaking) {
-          speak(fallbackResponse);
+        if (isVoiceInput && !isSpeaking) {
+          speak(errorMessage);
         }
       }, 300);
     }
 
     setInput('');
+    setIsVoiceInput(false);
   };
 
   return (

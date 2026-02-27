@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE,
@@ -31,7 +31,7 @@ axiosInstance.interceptors.response.use(
       // We can trigger a logout event here, but typically we handle that in AuthContext
       // For now, just remove the token if it's strictly a 401 from protected routes
       if (localStorage.getItem('medistock_token')) {
-          console.error("Authentication expired or invalid. Please login again.");
+        console.error("Authentication expired or invalid. Please login again.");
       }
     }
     return Promise.reject(error);

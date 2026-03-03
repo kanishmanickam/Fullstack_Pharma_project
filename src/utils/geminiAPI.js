@@ -3,8 +3,8 @@
  * Uses Google's Generative AI API for intelligent conversation
  */
 
-const GEMINI_API_KEY = 'AIzaSyB4WxEIVJIAaHRxDEJlja1GXdLGXaMs-bI';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_KEY = process.env(GEMINI_API_KEY);
+const GEMINI_API_URL = process.env(GEMINI_API_URL);
 
 /**
  * Get AI-powered response from Gemini API

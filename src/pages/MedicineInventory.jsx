@@ -81,23 +81,25 @@ const MedicineInventory = () => {
 
 
     // Convert API records to the shape expected by the grid
-    const convertRecordToRow = (m) => ({
-        _id: String(m._id),
-        medicineId: m.medicineId || m.batchNumber || m._id, // fallback based on schema fields
-        name: m.name,
-        category: m.category,
-        unitPrice: m.unitPrice !== undefined ? m.unitPrice : m.price,
-        stockQuantity: m.stockQuantity !== undefined ? m.stockQuantity : m.quantity,
-        expiryDate: m.expiryDate,
-        supplierId: m.supplier || null,
-    });
+    function convertRecordToRow(m) {
+        return {
+            _id: String(m._id),
+            medicineId: m.medicineId || m.batchNumber || m._id,
+            name: m.name,
+            category: m.category,
+            unitPrice: m.unitPrice !== undefined ? m.unitPrice : m.price,
+            stockQuantity: m.stockQuantity !== undefined ? m.stockQuantity : m.quantity,
+            expiryDate: m.expiryDate,
+            supplierId: m.supplierId || null,
+        };
+    }
 
     // ── data fetchers ──────────────────────────────────────
-    const fetchMedicines = useCallback(async () => {
+    const fetchMedicines = useCallback(async function fetchMedicinesImpl() {
         try {
             setLoading(true);
-            const res = await axiosInstance.get('/medicines');
-            const data = Array.isArray(res.data) ? res.data : (res.data.medicines || []);
+            const res = await axiosInstance.get('/medicine-inv');
+            const data = Array.isArray(res.data.medicines) ? res.data.medicines : [];
             const rows = data.map(convertRecordToRow);
             setAllMedicines(rows);
             setMedicines(rows);
@@ -107,17 +109,19 @@ const MedicineInventory = () => {
         } finally {
             setLoading(false);
         }
-    }, [showSnackbar]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const fetchSuppliers = useCallback(async () => {
+    const fetchSuppliers = useCallback(async function fetchSuppliersImpl() {
         try {
             const res = await axiosInstance.get('/suppliers');
-            setSuppliers(Array.isArray(res.data) ? res.data : (res.data.data || []));
+            setSuppliers(Array.isArray(res.data) ? res.data : (res.data.suppliers || []));
         } catch (error) {
             console.error('Failed to fetch suppliers:', error);
             showSnackbar('Failed to fetch suppliers list', 'error');
         }
-    }, [showSnackbar]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         fetchMedicines();
@@ -125,22 +129,24 @@ const MedicineInventory = () => {
     }, []);
 
     // ── helpers ────────────────────────────────────────────
-    const showSnackbar = (message, severity = 'success') => {
+    function showSnackbar(message, severity = 'success') {
         setSnackbar({ open: true, message, severity });
-    };
+    }
 
-    const resetForm = () => {
+    function resetForm() {
         setForm(emptyForm);
         setSelectedRow(null);
         setIsEditMode(false);
-    };
+    }
 
-    const handleChange = (field) => (e) => {
-        setForm((prev) => ({ ...prev, [field]: e.target.value }));
-    };
+    function handleChange(field) {
+        return function (e) {
+            setForm((prev) => ({ ...prev, [field]: e.target.value }));
+        };
+    }
 
     // ── search ─────────────────────────────────────────────
-    const handleSearch = async () => {
+    async function handleSearch() {
         if (!searchQuery.trim()) {
             fetchMedicines();
             return;
@@ -148,8 +154,8 @@ const MedicineInventory = () => {
 
         try {
             setLoading(true);
-            const res = await axiosInstance.get(`/medicines/search/${searchQuery}`);
-            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+            const res = await axiosInstance.get('/medicine-inv/search', { params: { query: searchQuery } });
+            const data = Array.isArray(res.data.medicines) ? res.data.medicines : [];
             const rows = data.map(convertRecordToRow);
 
             if (rows.length === 0) {
@@ -164,10 +170,10 @@ const MedicineInventory = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     // ── row click → populate form ──────────────────────────
-    const handleRowClick = (params) => {
+    function handleRowClick(params) {
         const row = params.row;
         setForm({
             medicineId: row.medicineId,
@@ -180,10 +186,10 @@ const MedicineInventory = () => {
         });
         setSelectedRow(row);
         setIsEditMode(true);
-    };
+    }
 
     // ── dialog open helpers ────────────────────────────────
-    const openInsertDialog = () => {
+    function openInsertDialog() {
         if (!form.medicineId || !form.name || !form.category || !form.unitPrice || !form.stockQuantity || !form.expiryDate || !form.supplierId) {
             showSnackbar('Please fill all fields', 'warning');
             return;
@@ -194,9 +200,9 @@ const MedicineInventory = () => {
             title: 'Confirm Insert',
             message: `Are you sure you want to add medicine "${form.name}" (ID: ${form.medicineId})?`,
         });
-    };
+    }
 
-    const openUpdateDialog = () => {
+    function openUpdateDialog() {
         if (!isEditMode) {
             showSnackbar('Select a record from the grid to update', 'warning');
             return;
@@ -207,9 +213,9 @@ const MedicineInventory = () => {
             title: 'Confirm Update',
             message: `Are you sure you want to update medicine "${form.name}" (ID: ${form.medicineId})?`,
         });
-    };
+    }
 
-    const openDeleteDialog = () => {
+    function openDeleteDialog() {
         if (!isEditMode) {
             showSnackbar('Select a record from the grid to delete', 'warning');
             return;
@@ -220,10 +226,10 @@ const MedicineInventory = () => {
             title: 'Confirm Delete',
             message: `Are you sure you want to delete medicine "${form.name}" (ID: ${form.medicineId})? This action cannot be undone.`,
         });
-    };
+    }
 
     // ── dialog confirm handler ─────────────────────────────
-    const handleDialogConfirm = async () => {
+    async function handleDialogConfirm() {
         const { type } = dialog;
         setDialog({ ...dialog, open: false });
 
@@ -234,22 +240,22 @@ const MedicineInventory = () => {
             unitPrice: Number(form.unitPrice),
             stockQuantity: Number(form.stockQuantity),
             expiryDate: form.expiryDate ? dayjs(form.expiryDate).toISOString() : null,
-            supplier: form.supplierId, // send supplier ID as 'supplier' based on API schema
+            supplierId: form.supplierId,
         };
 
         try {
             setLoading(true);
             if (type === 'insert') {
-                await axiosInstance.post('/medicines', standardized);
+                await axiosInstance.post('/medicine-inv', standardized);
                 showSnackbar('Medicine added successfully');
             } else if (type === 'update') {
-                await axiosInstance.put(`/medicines/${selectedRow._id}`, standardized);
+                await axiosInstance.put(`/medicine-inv/${selectedRow.medicineId}`, standardized);
                 showSnackbar('Medicine updated successfully');
             } else if (type === 'delete') {
-                await axiosInstance.delete(`/medicines/${selectedRow._id}`);
+                await axiosInstance.delete(`/medicine-inv/${selectedRow.medicineId}`);
                 showSnackbar('Medicine deleted successfully');
             }
-            fetchMedicines(); // Refresh grid after operation
+            fetchMedicines();
             resetForm();
         } catch (error) {
             console.error(`Operation ${type} failed:`, error);
@@ -257,7 +263,7 @@ const MedicineInventory = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     // ── DataGrid columns ──────────────────────────────────
     const columns = [
@@ -309,18 +315,25 @@ const MedicineInventory = () => {
         },
     ];
 
-    const rows = medicines.map((m) => ({
-        id: m._id,
-        medicineId: m.medicineId,
-        name: m.name,
-        category: m.category,
-        unitPrice: m.unitPrice,
-        stockQuantity: m.stockQuantity,
-        expiryDate: m.expiryDate,
-        supplierName: m.supplierId?.name || 'N/A',
-        supplierObjId: m.supplierId?._id || '',
-        _id: m._id
-    }));
+    const rows = medicines.map((m) => {
+        // Handle supplier data - could be object (populated) or string (ID only)
+        const supplierObj = typeof m.supplierId === 'object' && m.supplierId ? m.supplierId : null;
+        const supplierName = supplierObj?.name || 'N/A';
+        const supplierId = supplierObj?._id || m.supplierId || '';
+        
+        return {
+            id: m._id,
+            medicineId: m.medicineId,
+            name: m.name,
+            category: m.category,
+            unitPrice: m.unitPrice,
+            stockQuantity: m.stockQuantity,
+            expiryDate: m.expiryDate,
+            supplierName: supplierName,
+            supplierObjId: supplierId,
+            _id: m._id
+        };
+    });
 
     // ── render ─────────────────────────────────────────────
     return (

@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, authorize, ownerOnly, stampUserAction } from '../middleware/auth.js';
 import {
   register,
   login,
@@ -12,13 +12,15 @@ import {
 const router = express.Router();
 
 // Public routes
-router.post('/register', register);
 router.post('/login', login);
 
-// Protected routes
+// Protected routes - User registration requires owner authentication
+router.post('/register', protect, ownerOnly, stampUserAction, register);
+
+// User profile and management
 router.get('/me', protect, getCurrentUser);
-router.get('/users', protect, authorize('owner'), getAllUsers);
-router.put('/users/:id', protect, authorize('owner'), updateUser);
-router.delete('/users/:id', protect, authorize('owner'), deleteUser);
+router.get('/users', protect, ownerOnly, getAllUsers);
+router.put('/users/:id', protect, ownerOnly, stampUserAction, updateUser);
+router.delete('/users/:id', protect, ownerOnly, stampUserAction, deleteUser);
 
 export default router;

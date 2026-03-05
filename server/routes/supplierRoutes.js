@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, authorize, ownerOnly } from '../middleware/auth.js';
 import {
   createSupplier,
   getAllSuppliers,
@@ -13,22 +13,22 @@ import {
 
 const router = express.Router();
 
-// Supplier routes (Owner/Staff only)
-router.post('/suppliers', protect, authorize('owner', 'staff'), createSupplier);
+// Supplier routes (Owner/Staff can view, only owner can create/update)
+router.post('/suppliers', protect, ownerOnly, createSupplier);
 router.get('/suppliers', protect, authorize('owner', 'staff'), getAllSuppliers);
-router.put('/suppliers/:id', protect, authorize('owner', 'staff'), updateSupplier);
+router.put('/suppliers/:id', protect, ownerOnly, updateSupplier);
 
-// Reorder suggestion routes
+// Reorder suggestion routes (All staff can view and generate)
 router.post('/reorder/generate', protect, authorize('owner', 'staff'), generateReorderSuggestions);
 router.get('/reorder/suggestions', protect, authorize('owner', 'staff'), getReorderSuggestions);
 
-// Purchase order routes
-router.post('/purchase-orders', protect, authorize('owner', 'staff'), createPurchaseOrder);
+// Purchase order routes (Owner approves, staff can view)
+router.post('/purchase-orders', protect, ownerOnly, createPurchaseOrder); // Owner only
 router.get('/purchase-orders', protect, authorize('owner', 'staff'), getAllPurchaseOrders);
 router.put('/purchase-orders/:id', protect, authorize('owner', 'staff'), updatePurchaseOrderStatus);
 
 // Legacy routes for backwards compatibility
 router.get('/', protect, getAllSuppliers);
-router.post('/', protect, authorize('owner', 'staff'), createSupplier);
+router.post('/', protect, ownerOnly, createSupplier);
 
 export default router;

@@ -14,6 +14,7 @@ import FinancialReports from './pages/FinancialReports';
 import MedicineInventory from './pages/MedicineInventory';
 import SupplierManagement from './pages/reorder/SupplierManagement';
 import ReorderReview from './pages/reorder/ReorderReview';
+import UserManagement from './pages/admin/UserManagement';
 
 function App() {
   return (
@@ -117,6 +118,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['owner', 'staff']}>
                 <ReorderReview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/user-management"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <UserManagement />
               </ProtectedRoute>
             }
           />

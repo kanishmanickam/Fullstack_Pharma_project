@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers,
+  FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers, FaUsersCog,
   FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills, FaTruck, FaClipboardList
 } from 'react-icons/fa';
 import { useState } from 'react';
@@ -28,6 +28,7 @@ const Layout = ({ children }) => {
     { path: '/suppliers', label: 'Suppliers', icon: <FaTruck />, roles: ['owner', 'staff'] },
     { path: '/reorder-review', label: 'Reorder Management', icon: <FaClipboardList />, roles: ['owner', 'staff'] },
     { path: '/excel-upload', label: 'Excel Upload', icon: <FaFileUpload />, roles: ['owner', 'staff'] },
+    { path: '/user-management', label: 'User Management', icon: <FaUsersCog />, roles: ['owner'] },
     { path: '/stock-intelligence', label: 'Stock Intelligence', icon: <FaBrain />, roles: ['owner'] },
     { path: '/reports', label: 'Reports & Analytics', icon: <FaChartLine />, roles: ['owner'] },
     { path: '/financial-reports', label: 'Financial Reports', icon: <FaMoneyBillWave />, roles: ['owner'] },

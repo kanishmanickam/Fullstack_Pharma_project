@@ -11,6 +11,8 @@ const Billing = () => {
   const [billItems, setBillItems] = useState([]);
   const [customerType, setCustomerType] = useState('walking'); // walking or regular
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash'); // cash or gpay
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [currentBill, setCurrentBill] = useState(null);
@@ -194,10 +196,14 @@ const Billing = () => {
       return;
     }
 
+    const finalCustomerName = customerType === 'regular' && selectedCustomer
+      ? selectedCustomer.name
+      : (walkInName.trim() ? `${walkInName.trim()}${walkInPhone.trim() ? ` (${walkInPhone.trim()})` : ''}` : 'Walking Customer');
+
     const payload = {
       customerType,
       customerId: customerType === 'regular' && selectedCustomer ? selectedCustomer._id : null,
-      customerName: customerType === 'regular' && selectedCustomer ? selectedCustomer.name : 'Walking Customer',
+      customerName: finalCustomerName,
       items: billItems.map(item => ({
         medicineId: item.medicineId,
         name: item.name,
@@ -216,11 +222,11 @@ const Billing = () => {
       const res = await axiosInstance.post('/billing', payload);
 
       setCurrentBill({
-        id: res.data.bill._id,
+        id: res.data.bill.billNumber || res.data.bill._id,
         date: res.data.bill.createdAt || new Date().toISOString(),
         customerType: res.data.bill.customerType || customerType,
         customerName: res.data.bill.customerName || payload.customerName,
-        total: res.data.bill.totalAmount,
+        total: res.data.bill.grandTotal || payload.totalAmount,
         paymentMethod: res.data.bill.paymentMethod
       });
       setShowPaymentSuccess(true);
@@ -230,6 +236,8 @@ const Billing = () => {
         setBillItems([]);
         setCustomerType('walking');
         setSelectedCustomer(null);
+        setWalkInName('');
+        setWalkInPhone('');
         setPaymentMethod('cash');
         setShowPaymentSuccess(false);
         setCurrentBill(null);
@@ -332,17 +340,43 @@ const Billing = () => {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Customer</label>
                 <select
-                  value={selectedCustomer?.id || ''}
-                  onChange={(e) => setSelectedCustomer(customers.find(c => c.id === parseInt(e.target.value)))}
+                  value={selectedCustomer?._id || ''}
+                  onChange={(e) => setSelectedCustomer(customers.find(c => c._id === e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Choose a customer</option>
-                  {customers.filter(c => c.type === 'regular').map(customer => (
+                  {customers.filter(c => c.customerType === 'regular').map(customer => (
                     <option key={customer._id} value={customer._id}>
                       {customer.name} - {customer.phone}
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Walk-in Customer Details */}
+            {customerType === 'walking' && (
+              <div className="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={walkInName}
+                    onChange={(e) => setWalkInName(e.target.value)}
+                    placeholder="E.g. John Doe"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone (Optional)</label>
+                  <input
+                    type="tel"
+                    value={walkInPhone}
+                    onChange={(e) => setWalkInPhone(e.target.value)}
+                    placeholder="E.g. 9876543210"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             )}
 

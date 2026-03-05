@@ -20,9 +20,9 @@ const suppliers = [
         "total_orders": 45,
         "successful_deliveries": 42,
         "medicine_categories": [
-            "Tablet",
-            "Syrup",
-            "Capsule"
+            "Analgesic",
+            "Antibiotic",
+            "Anti-inflammatory"
         ],
         "is_active": true,
         "notes": "Reliable supplier with fast delivery"
@@ -41,9 +41,9 @@ const suppliers = [
         "total_orders": 32,
         "successful_deliveries": 28,
         "medicine_categories": [
-            "Injection",
-            "Ointment",
-            "Drops"
+            "Topical",
+            "Antacid",
+            "Vitamin"
         ],
         "is_active": true,
         "notes": "Specializes in injectable medicines"
@@ -62,10 +62,9 @@ const suppliers = [
         "total_orders": 67,
         "successful_deliveries": 65,
         "medicine_categories": [
-            "Tablet",
-            "Syrup",
-            "Capsule",
-            "Ointment"
+            "Cough Suppressant",
+            "Antihistamine",
+            "Analgesic"
         ],
         "is_active": true,
         "notes": "Premium quality medicines, excellent track record"
@@ -105,9 +104,9 @@ const suppliers = [
         "total_orders": 28,
         "successful_deliveries": 22,
         "medicine_categories": [
-            "Syrup",
-            "Capsule",
-            "Other"
+            "Topical",
+            "Antibiotic",
+            "Antihistamine"
         ],
         "is_active": true,
         "notes": "Budget-friendly options, occasional delays"

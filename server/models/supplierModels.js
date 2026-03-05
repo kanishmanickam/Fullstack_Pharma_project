@@ -44,7 +44,6 @@ const supplierSchema = new mongoose.Schema(
     medicine_categories: [
       {
         type: String,
-        enum: ['Tablet', 'Syrup', 'Injection', 'Capsule', 'Ointment', 'Drops', 'Other'],
       },
     ],
     registration_date: {

@@ -6,6 +6,7 @@ import { FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaStar, FaShopping
 const ReorderReview = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [allSuppliers, setAllSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('suggestions');
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
@@ -25,8 +26,12 @@ const ReorderReview = () => {
     setLoading(true);
     try {
       if (activeTab === 'suggestions') {
-        const res = await axiosInstance.get('/suppliers/reorder/suggestions');
-        setSuggestions(res.data.suggestions || []);
+        const [suggRes, suppRes] = await Promise.all([
+          axiosInstance.get('/suppliers/reorder/suggestions'),
+          axiosInstance.get('/suppliers')
+        ]);
+        setSuggestions(suggRes.data.suggestions || []);
+        setAllSuppliers(suppRes.data.suppliers || []);
       } else {
         const res = await axiosInstance.get('/suppliers/purchase-orders');
         setPurchaseOrders(res.data.purchaseOrders || []);
@@ -55,7 +60,7 @@ const ReorderReview = () => {
   const handleCreateOrder = (suggestion) => {
     setSelectedSuggestion(suggestion);
     setOrderForm({
-      supplier_id: suggestion.suggested_suppliers[0]?.supplier_id || '',
+      supplier_id: suggestion.suggested_suppliers[0]?.supplier_id?._id || suggestion.suggested_suppliers[0]?.supplier_id || '',
       unit_price: '',
       expected_delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: '',
@@ -149,21 +154,19 @@ const ReorderReview = () => {
           <div className="flex gap-4">
             <button
               onClick={() => setActiveTab('suggestions')}
-              className={`pb-2 px-4 ${
-                activeTab === 'suggestions'
-                  ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
-                  : 'text-gray-600'
-              }`}
+              className={`pb-2 px-4 ${activeTab === 'suggestions'
+                ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
+                : 'text-gray-600'
+                }`}
             >
               Reorder Suggestions ({suggestions.length})
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-2 px-4 ${
-                activeTab === 'orders'
-                  ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
-                  : 'text-gray-600'
-              }`}
+              className={`pb-2 px-4 ${activeTab === 'orders'
+                ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
+                : 'text-gray-600'
+                }`}
             >
               Purchase Orders ({purchaseOrders.length})
             </button>
@@ -223,10 +226,10 @@ const ReorderReview = () => {
                       {suggestion.suggested_suppliers.map((supplier, index) => (
                         <div key={index} className="border rounded-lg p-3">
                           <div className="flex justify-between items-start">
-                            <p className="font-medium">{supplier.name}</p>
+                            <p className="font-medium">{supplier.supplier_name || supplier.supplier_id?.supplier_name || 'Unknown Supplier'}</p>
                             <div className="flex items-center gap-1">
                               <FaStar className="text-yellow-500 text-sm" />
-                              <span className="text-sm font-semibold">{supplier.delivery_score.toFixed(1)}</span>
+                              <span className="text-sm font-semibold">{supplier.delivery_score ? supplier.delivery_score.toFixed(1) : 'N/A'}</span>
                             </div>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">Est. ₹{supplier.estimated_price}/unit</p>
@@ -340,11 +343,33 @@ const ReorderReview = () => {
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">Select a supplier...</option>
-                    {selectedSuggestion.suggested_suppliers.map((supplier) => (
-                      <option key={supplier.supplier_id} value={supplier.supplier_id}>
-                        {supplier.name} (Score: {supplier.delivery_score.toFixed(1)}) - ₹{supplier.estimated_price}/unit
-                      </option>
-                    ))}
+
+                    {selectedSuggestion.suggested_suppliers.length > 0 && (
+                      <optgroup label="Suggested Suppliers (Category Match)">
+                        {selectedSuggestion.suggested_suppliers.map((supplier) => {
+                          const supId = supplier.supplier_id?._id || supplier.supplier_id;
+                          const supName = supplier.supplier_name || supplier.supplier_id?.supplier_name || 'Unknown Supplier';
+                          const score = supplier.delivery_score ? supplier.delivery_score.toFixed(1) : 'N/A';
+                          return (
+                            <option key={`sugg-${supId}`} value={supId}>
+                              ⭐ {supName} (Score: {score})
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+
+                    <optgroup label="All Other Suppliers">
+                      {allSuppliers
+                        .filter(s => !selectedSuggestion.suggested_suppliers.some(ss =>
+                          (ss.supplier_id?._id || ss.supplier_id) === s._id
+                        ))
+                        .map((supplier) => (
+                          <option key={`all-${supplier._id}`} value={supplier._id}>
+                            {supplier.supplier_name}
+                          </option>
+                        ))}
+                    </optgroup>
                   </select>
                 </div>
 

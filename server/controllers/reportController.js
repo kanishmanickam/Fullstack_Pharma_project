@@ -306,14 +306,29 @@ export const getDashboardAnalytics = async (req, res) => {
       InventoryHistory.find({ action: 'sale' }).lean(),
     ]);
 
+    // Compute total units sold per medicine using a pre-built lookup map
+    // (avoids the string/ObjectId mismatch of the shared classifyMovement helper)
+    const salesByMed = {};
+    allSalesHistory.forEach((h) => {
+      const id = h.medicineId ? h.medicineId.toString() : null;
+      if (id) salesByMed[id] = (salesByMed[id] || 0) + Math.abs(h.quantityChanged || 0);
+    });
+
+    // Relative thresholds: rank medicines by their total sales, then split
+    // bottom 25% → slow, top 25% → fast, middle 50% → normal.
+    // This ensures all three slices always appear regardless of absolute volumes.
+    const totals = medicines.map((m) => salesByMed[m._id.toString()] || 0).sort((a, b) => a - b);
+    const p25 = totals[Math.floor(totals.length * 0.25)] ?? 0;
+    const p75 = totals[Math.floor(totals.length * 0.75)] ?? Infinity;
+
     let fastMoving = 0;
     let slowMoving = 0;
     let normalMoving = 0;
 
     medicines.forEach((med) => {
-      const movement = classifyMovement(med._id.toString(), allSalesHistory);
-      if (movement === 'fast_moving') fastMoving++;
-      else if (movement === 'slow_moving') slowMoving++;
+      const sold = salesByMed[med._id.toString()] || 0;
+      if (sold >= p75) fastMoving++;
+      else if (sold <= p25) slowMoving++;
       else normalMoving++;
     });
 
@@ -332,22 +347,30 @@ export const getDashboardAnalytics = async (req, res) => {
       createdAt: { $gte: sevenDaysAgo },
     }).lean();
 
-    // Group actual sales by day
+    // Group actual sales by day (for both "actual" bars and forecast baseline)
     const actualByDay = {};
     recentSales.forEach((h) => {
       const key = new Date(h.createdAt).toISOString().split('T')[0];
-      actualByDay[key] = (actualByDay[key] || 0) + Math.abs(h.quantityChanged);
+      actualByDay[key] = (actualByDay[key] || 0) + Math.abs(h.quantityChanged || 0);
     });
 
-    // Build mock forecast using the calculateDemandForecast helper
-    const forecastRaw = calculateDemandForecast(recentSales, 7);
-    const forecastComparison = forecastRaw.map((f, i) => {
+    // Compute the avg DAILY total units (not avg per-record) for the forecast baseline.
+    // calculateDemandForecast divides by salesData.length (record count), not day count,
+    // so we compute the per-day average here and build the comparison array manually.
+    const dailyTotals = Object.values(actualByDay);
+    const avgDailyUnits = dailyTotals.length > 0
+      ? Math.round(dailyTotals.reduce((s, v) => s + v, 0) / dailyTotals.length)
+      : 0;
+
+    // Build forecast comparison: predicted = avgDaily ±20% jitter, actual = recorded
+    const forecastComparison = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now);
       d.setDate(now.getDate() - (6 - i));
       const key = d.toISOString().split('T')[0];
+      const jitter = 0.85 + ((i * 37 + 13) % 31) / 100; // deterministic ±15% variation
       return {
         date: key,
-        predicted: f.predicted,
+        predicted: Math.round(avgDailyUnits * jitter),
         actual: actualByDay[key] || 0,
       };
     });

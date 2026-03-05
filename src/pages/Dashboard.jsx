@@ -401,7 +401,7 @@ export default function Dashboard() {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Line Chart — Sales Trend */}
-              <ChartCard title="📈 Sales Trend — Revenue (Last 30 Days)">
+              <ChartCard title="Sales Trend — Revenue (Last 30 Days)">
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={filteredSales} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -433,7 +433,7 @@ export default function Dashboard() {
               </ChartCard>
 
               {/* Pie Chart — Stock Distribution */}
-              <ChartCard title="🥧 Stock Distribution — Movement Classification">
+              <ChartCard title="Stock Distribution — Movement Classification">
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
@@ -459,7 +459,7 @@ export default function Dashboard() {
             </div>
 
             {/* Bar Chart — Forecast vs Actual */}
-            <ChartCard title="📊 Forecast vs Actual Sales — Last 7 Days">
+            <ChartCard title="Forecast vs Actual Sales — Last 7 Days">
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={forecastComparison} margin={{ top: 4, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

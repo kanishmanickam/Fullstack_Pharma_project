@@ -2,7 +2,7 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Medicine, UploadLog } from '../models/index.js';
+import { Medicine, UploadLog, Category } from '../models/index.js';
 import { detectAnomalies } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 import { createAuditEntry } from '../middleware/auditLogger.js';
@@ -36,6 +36,21 @@ export const uploadExcel = async (req, res) => {
     // Process records
     for (const row of data) {
       try {
+        // --- Dynamic Category Handling ---
+        let categoryDoc = await Category.findOne({ name: row.category });
+        if (!categoryDoc) {
+          categoryDoc = await Category.create({
+            name: row.category,
+            description: 'Imported via Excel upload',
+            isApproved: false
+          });
+          anomalies.push({
+            row: row.__rowNum__ || 'N/A',
+            issue: `Unregistered Category detected: '${row.category}'. Added as Pending for Admin approval.`,
+            type: 'warning'
+          });
+        }
+
         // Check if medicine already exists
         const existingMedicine = await Medicine.findOne({
           name: row.name,
@@ -45,12 +60,13 @@ export const uploadExcel = async (req, res) => {
         if (existingMedicine) {
           // Update existing
           existingMedicine.quantity += parseInt(row.quantity) || 0;
+          existingMedicine.category = categoryDoc._id; // Ensure it uses relation
           await existingMedicine.save();
         } else {
           // Create new
           await Medicine.create({
             name: row.name,
-            category: row.category,
+            category: categoryDoc._id,
             batchNumber: row.batchNumber,
             expiryDate: row.expiryDate,
             quantity: row.quantity,

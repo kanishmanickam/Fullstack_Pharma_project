@@ -2,6 +2,7 @@ import {
   Medicine,
   InventoryHistory,
   Alert,
+  Category,
 } from '../models/index.js';
 import {
   sortByFEFO,
@@ -14,13 +15,18 @@ import log from '../utils/logger.js';
 // Get all medicines
 export const getAllMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find();
+    const medicines = await Medicine.find().populate('category', 'name').lean();
     const sortedMedicines = sortByFEFO(medicines);
+
+    const formattedMedicines = sortedMedicines.map(m => ({
+      ...m,
+      category: m.category?.name || 'Unknown'
+    }));
 
     res.status(200).json({
       success: true,
-      count: sortedMedicines.length,
-      medicines: sortedMedicines,
+      count: formattedMedicines.length,
+      medicines: formattedMedicines,
     });
   } catch (error) {
     log('ERROR', 'Get all medicines error', { error: error.message });
@@ -35,7 +41,7 @@ export const getAllMedicines = async (req, res) => {
 // Get single medicine
 export const getMedicine = async (req, res) => {
   try {
-    const medicine = await Medicine.findById(req.params.id);
+    const medicine = await Medicine.findById(req.params.id).populate('category', 'name').lean();
 
     if (!medicine) {
       return res.status(404).json({
@@ -43,6 +49,8 @@ export const getMedicine = async (req, res) => {
         message: 'Medicine not found',
       });
     }
+
+    medicine.category = medicine.category?.name || 'Unknown';
 
     res.status(200).json({
       success: true,
@@ -83,9 +91,18 @@ export const createMedicine = async (req, res) => {
 
     const stockStatus = getStockStatus(quantity, reorderLevel || 50);
 
+    // Dynamic Category validation and mapping
+    const categoryDoc = await Category.findOne({ name: category });
+    if (!categoryDoc) {
+      return res.status(400).json({
+        success: false,
+        message: `Category '${category}' not found or unregistered.`,
+      });
+    }
+
     const medicine = await Medicine.create({
       name,
-      category,
+      category: categoryDoc._id,
       batchNumber,
       expiryDate,
       quantity,
@@ -120,6 +137,18 @@ export const updateMedicine = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
+    // Map Category string to explicit ObjectId if updating it
+    if (updates.category) {
+      const categoryDoc = await Category.findOne({ name: updates.category });
+      if (!categoryDoc) {
+        return res.status(400).json({
+          success: false,
+          message: `Category '${updates.category}' not found or unregistered.`,
+        });
+      }
+      updates.category = categoryDoc._id;
+    }
+
     const medicine = await Medicine.findByIdAndUpdate(
       id,
       updates,
@@ -139,12 +168,16 @@ export const updateMedicine = async (req, res) => {
       await medicine.save();
     }
 
+    await medicine.populate('category', 'name');
+    const returnedMedicine = medicine.toObject();
+    returnedMedicine.category = returnedMedicine.category?.name || 'Unknown';
+
     log('INFO', 'Medicine updated', { medicineId: id });
 
     res.status(200).json({
       success: true,
       message: 'Medicine updated successfully',
-      medicine,
+      medicine: returnedMedicine,
     });
   } catch (error) {
     log('ERROR', 'Update medicine error', { error: error.message });

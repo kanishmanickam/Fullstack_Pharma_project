@@ -17,6 +17,7 @@ import chatbotRoutes from './routes/chatbotRoutes.js';
 import prescriptionRoutes from './routes/prescriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import { auditLogger } from './middleware/auditLogger.js';
@@ -75,11 +76,11 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
-
-app.use('/api/suppliers', supplierRoutes);
 
 // Root route
 app.get('/', (req, res) => {

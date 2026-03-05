@@ -43,7 +43,8 @@ const supplierSchema = new mongoose.Schema(
     },
     medicine_categories: [
       {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
       },
     ],
     registration_date: {

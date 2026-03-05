@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { User, Medicine, Customer, Bill, Category } from './models/index.js';
 import connectDB from './config/database.js';
-import { User, Medicine, Customer } from './models/index.js';
 import { Supplier } from './models/supplierModels.js';
 
 dotenv.config();
@@ -13,9 +13,35 @@ const seedDatabase = async () => {
 
     // Clear existing data
     await User.deleteMany({});
+    await Category.deleteMany({});
     await Medicine.deleteMany({});
     await Customer.deleteMany({});
+    await Bill.deleteMany({});
     await Supplier.deleteMany({});
+    console.log('Existing data cleared');
+
+    // Create a predefined list of valid functional medical Categories
+    const categoryNames = [
+      'Analgesic',
+      'Antibiotic',
+      'Antacid',
+      'Cough Suppressant',
+      'Anti-inflammatory',
+      'Vitamin',
+      'Topical',
+      'Antihistamine',
+      'Antidiabetic',
+      'Antihypertensive'
+    ];
+
+    const categoryDocs = await Category.insertMany(
+      categoryNames.map(name => ({ name, description: `Standard ${name} Category`, isApproved: true }))
+    );
+    console.log(`${categoryDocs.length} Categories seeded`);
+
+    // Build map for quick access
+    const categoryMap = {};
+    categoryDocs.forEach(c => { categoryMap[c.name] = c._id; });
 
     // Seed users
     const userData = [
@@ -48,7 +74,7 @@ const seedDatabase = async () => {
     console.log('✓ Users seeded');
 
     // Seed medicines
-    const medicines = await Medicine.insertMany([
+    const medicineData = [
       {
         name: 'Aspirin',
         category: 'Analgesic',
@@ -215,12 +241,20 @@ const seedDatabase = async () => {
         purchasePrice: 10,
         sellingPrice: 22,
         rackNumber: 'F2',
-        stockStatus: 'high',
-        supplier: 'MedChem',
+        stockStatus: 'medium',
+        supplier: 'Allergy Care Associates',
       },
-    ]);
+    ];
 
-    console.log('✓ Medicines seeded');
+    // Swap category names for ObjectId references
+    const populatedMedicines = medicineData.map(m => ({
+      ...m,
+      category: categoryMap[m.category] // Replace string with ObjectId
+    }));
+
+    const medicines = await Medicine.insertMany(populatedMedicines);
+
+    console.log(`${medicines.length} medicines seeded successfully`);
 
     // Seed customers
     const customers = await Customer.insertMany([
@@ -258,92 +292,6 @@ const seedDatabase = async () => {
 
     console.log('✓ Customers seeded');
 
-    // Seed suppliers
-    const suppliers = await Supplier.insertMany([
-      {
-        supplier_name: 'MedSupply India',
-        contact_info: {
-          phone: '+919876543210',
-          email: 'contact@medsupply.com',
-          address: '123 Medical Street, Anna Nagar',
-          city: 'Chennai',
-          state: 'Tamil Nadu',
-          pincode: '600040',
-        },
-        delivery_performance_score: 8.5,
-        total_orders: 45,
-        successful_deliveries: 42,
-        medicine_categories: ['Tablet', 'Syrup', 'Capsule'],
-        notes: 'Reliable supplier with fast delivery',
-      },
-      {
-        supplier_name: 'PharmaHub Distributors',
-        contact_info: {
-          phone: '+919988776655',
-          email: 'sales@pharmahub.in',
-          address: '456 Healthcare Avenue, T Nagar',
-          city: 'Chennai',
-          state: 'Tamil Nadu',
-          pincode: '600017',
-        },
-        delivery_performance_score: 7.2,
-        total_orders: 32,
-        successful_deliveries: 28,
-        medicine_categories: ['Injection', 'Ointment', 'Drops'],
-        notes: 'Specializes in injectable medicines',
-      },
-      {
-        supplier_name: 'HealthCare Solutions',
-        contact_info: {
-          phone: '+918765432109',
-          email: 'info@healthcaresol.com',
-          address: '789 Wellness Road, Velachery',
-          city: 'Chennai',
-          state: 'Tamil Nadu',
-          pincode: '600042',
-        },
-        delivery_performance_score: 9.1,
-        total_orders: 67,
-        successful_deliveries: 65,
-        medicine_categories: ['Tablet', 'Syrup', 'Capsule', 'Ointment'],
-        notes: 'Premium quality medicines, excellent track record',
-      },
-      {
-        supplier_name: 'Apollo MedSource',
-        contact_info: {
-          phone: '+917654321098',
-          email: 'orders@apollomedsource.com',
-          address: '321 Medical Plaza, Adyar',
-          city: 'Chennai',
-          state: 'Tamil Nadu',
-          pincode: '600020',
-        },
-        delivery_performance_score: 8.8,
-        total_orders: 54,
-        successful_deliveries: 52,
-        medicine_categories: ['Tablet', 'Injection', 'Drops'],
-        notes: 'Wide range of medicines, competitive pricing',
-      },
-      {
-        supplier_name: 'MediCare Wholesale',
-        contact_info: {
-          phone: '+916543210987',
-          email: 'support@medicarewholesale.in',
-          address: '555 Supply Chain Street, Porur',
-          city: 'Chennai',
-          state: 'Tamil Nadu',
-          pincode: '600116',
-        },
-        delivery_performance_score: 6.5,
-        total_orders: 28,
-        successful_deliveries: 22,
-        medicine_categories: ['Syrup', 'Capsule', 'Other'],
-        notes: 'Budget-friendly options, occasional delays',
-      },
-    ]);
-
-    console.log('✓ Suppliers seeded');
-
     console.log(`
       ╔════════════════════════════════════════╗
       ║    Database Seeding Completed!         ║
@@ -351,7 +299,6 @@ const seedDatabase = async () => {
       ║ Users: ${users.length}                            ║
       ║ Medicines: ${medicines.length}                      ║
       ║ Customers: ${customers.length}                       ║
-      ║ Suppliers: ${suppliers.length}                       ║
       ╠════════════════════════════════════════╣
       ║ Test Credentials:                      ║
       ║ Owner: admin / admin123                ║
@@ -360,6 +307,8 @@ const seedDatabase = async () => {
       ╚════════════════════════════════════════╝
     `);
 
+    await mongoose.disconnect();
+    console.log('Done. Disconnected.');
     process.exit(0);
   } catch (error) {
     console.error('Seeding error:', error.message);

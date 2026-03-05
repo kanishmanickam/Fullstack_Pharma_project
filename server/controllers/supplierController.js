@@ -1,5 +1,5 @@
 import { Supplier, PurchaseOrder, ReorderSuggestion } from '../models/supplierModels.js';
-import { Medicine } from '../models/index.js';
+import { Medicine, Category } from '../models/index.js';
 import log from '../utils/logger.js';
 
 // ============ SUPPLIER MANAGEMENT ============
@@ -24,10 +24,16 @@ export const createSupplier = async (req, res) => {
       });
     }
 
+    let mappedCategories = [];
+    if (medicine_categories && Array.isArray(medicine_categories)) {
+      const categoryDocs = await Category.find({ name: { $in: medicine_categories } });
+      mappedCategories = categoryDocs.map(c => c._id);
+    }
+
     const supplier = await Supplier.create({
       supplier_name,
       contact_info,
-      medicine_categories,
+      medicine_categories: mappedCategories,
       notes,
     });
 
@@ -55,19 +61,32 @@ export const getAllSuppliers = async (req, res) => {
     let query = {};
 
     if (category) {
-      query.medicine_categories = category;
+      const categoryDoc = await Category.findOne({ name: category });
+      if (categoryDoc) {
+        query.medicine_categories = categoryDoc._id;
+      } else {
+        return res.status(200).json({ success: true, count: 0, suppliers: [] });
+      }
     }
 
     if (search) {
       query.supplier_name = { $regex: search, $options: 'i' };
     }
 
-    const suppliers = await Supplier.find(query).sort({ delivery_performance_score: -1 });
+    const suppliers = await Supplier.find(query)
+      .populate('medicine_categories', 'name')
+      .sort({ delivery_performance_score: -1 })
+      .lean();
+
+    const formattedSuppliers = suppliers.map(s => ({
+      ...s,
+      medicine_categories: s.medicine_categories?.map(c => c.name || 'Unknown') || []
+    }));
 
     res.status(200).json({
       success: true,
-      count: suppliers.length,
-      suppliers,
+      count: formattedSuppliers.length,
+      suppliers: formattedSuppliers,
     });
   } catch (error) {
     log('ERROR', 'Get suppliers error', { error: error.message });
@@ -85,6 +104,11 @@ export const updateSupplier = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    if (updateData.medicine_categories && Array.isArray(updateData.medicine_categories)) {
+      const categoryDocs = await Category.find({ name: { $in: updateData.medicine_categories } });
+      updateData.medicine_categories = categoryDocs.map(c => c._id);
+    }
+
     const supplier = await Supplier.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
@@ -97,12 +121,16 @@ export const updateSupplier = async (req, res) => {
       });
     }
 
+    await supplier.populate('medicine_categories', 'name');
+    const returnedSupplier = supplier.toObject();
+    returnedSupplier.medicine_categories = returnedSupplier.medicine_categories?.map(c => c.name || 'Unknown') || [];
+
     log('INFO', 'Supplier updated', { supplierId: id, userId: req.user.id });
 
     res.status(200).json({
       success: true,
       message: 'Supplier updated successfully',
-      supplier,
+      supplier: returnedSupplier,
     });
   } catch (error) {
     log('ERROR', 'Update supplier error', { error: error.message });
@@ -279,11 +307,11 @@ export const createPurchaseOrder = async (req, res) => {
     // Simulate sending order to supplier (automation)
     await simulateVendorCommunication(supplier, purchaseOrder);
 
-    log('INFO', 'Purchase order created', { 
-      orderId: purchaseOrder._id, 
-      orderNumber, 
+    log('INFO', 'Purchase order created', {
+      orderId: purchaseOrder._id,
+      orderNumber,
       supplierId: supplier._id,
-      userId: req.user.id 
+      userId: req.user.id
     });
 
     res.status(201).json({
@@ -360,7 +388,7 @@ export const updatePurchaseOrderStatus = async (req, res) => {
       // Update supplier delivery performance
       const supplier = order.supplier_id;
       supplier.successful_deliveries += 1;
-      
+
       // Calculate delivery performance score (0-10)
       const onTimeDelivery = new Date(order.actual_delivery_date) <= new Date(order.expected_delivery_date);
       const performanceBoost = onTimeDelivery ? 0.5 : -0.5;
@@ -368,16 +396,16 @@ export const updatePurchaseOrderStatus = async (req, res) => {
         0,
         Math.min(10, supplier.delivery_performance_score + performanceBoost)
       );
-      
+
       await supplier.save();
     }
 
     await order.save();
 
-    log('INFO', 'Purchase order updated', { 
-      orderId: id, 
-      status: order_status, 
-      userId: req.user.id 
+    log('INFO', 'Purchase order updated', {
+      orderId: id,
+      status: order_status,
+      userId: req.user.id
     });
 
     res.status(200).json({

@@ -25,6 +25,7 @@ const ROUTE_MAP = [
     { pattern: /\/api\/orders/i, action: 'ORDER_CREATED', module: 'Orders' },
     { pattern: /\/api\/auth\/register/i, action: 'USER_CREATED', module: 'UserManagement' },
     { pattern: /\/api\/auth/i, action: 'USER_UPDATED', module: 'UserManagement' },
+    { pattern: /\/api\/categories/i, action: 'CATEGORY_CREATED', module: 'Category Management' },
 ];
 
 const resolveActionModule = (method, path) => {

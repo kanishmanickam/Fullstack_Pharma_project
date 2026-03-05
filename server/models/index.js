@@ -64,6 +64,29 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 const User = mongoose.model('User', userSchema);
 
+// ============ CATEGORY SCHEMA ============
+const categorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    isApproved: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
+
+const Category = mongoose.model('Category', categorySchema);
+
 // ============ MEDICINE SCHEMA ============
 const medicineSchema = new mongoose.Schema(
   {
@@ -73,7 +96,8 @@ const medicineSchema = new mongoose.Schema(
       trim: true,
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
       required: true,
     },
     batchNumber: {
@@ -664,6 +688,7 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 export {
   User,
+  Category, // Exported Category
   Medicine,
   Customer,
   Bill,

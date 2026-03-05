@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { Supplier } from './models/supplierModels.js';
+import { Category } from './models/index.js';
 
 dotenv.config();
 
@@ -121,13 +122,30 @@ const seedSuppliers = async () => {
         });
         console.log('MongoDB connected');
 
-        // Clear existing suppliers (optional)
+        // Clear existing suppliers
         await Supplier.deleteMany({});
         console.log('Existing suppliers cleared');
 
-        const created = await Supplier.insertMany(suppliers);
+        // Fetch registered categories to map references correctly
+        const categories = await Category.find({});
+        const categoryMap = {};
+        categories.forEach(c => { categoryMap[c.name] = c._id; });
+
+        // Map supplier categories to ObjectIds
+        const mappedSuppliers = suppliers.map(supplier => {
+            const mappedCategories = supplier.medicine_categories
+                .map(catName => categoryMap[catName])
+                .filter(id => id); // Remove undefined if there's a typo
+
+            return {
+                ...supplier,
+                medicine_categories: mappedCategories
+            };
+        });
+
+        const created = await Supplier.insertMany(mappedSuppliers);
         console.log(`${created.length} suppliers seeded successfully:`);
-        created.forEach((s) => console.log(`  - ${s.supplier_name} (${s._id})`));
+        created.forEach((sup) => console.log(`  - ${sup.supplier_name} (${sup._id})`));
 
         await mongoose.disconnect();
         console.log('Done. Disconnected.');

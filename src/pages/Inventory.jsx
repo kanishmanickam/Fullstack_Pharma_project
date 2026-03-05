@@ -89,7 +89,7 @@ const Inventory = () => {
                 const stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
 
                 return (
-                  <tr key={medicine.id} className="hover:bg-gray-50">
+                  <tr key={medicine._id || medicine.batchNumber} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900">{medicine.name}</p>
                     </td>

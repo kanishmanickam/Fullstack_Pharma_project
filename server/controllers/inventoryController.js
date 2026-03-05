@@ -377,3 +377,73 @@ export const getInventoryHistory = async (req, res) => {
     });
   }
 };
+
+// Get inventory intelligence (fast/slow moving, critical, recommendations)
+export const getInventoryIntelligence = async (req, res) => {
+  try {
+    const medicines = await Medicine.find();
+    const history = await InventoryHistory.find({ action: 'sale' });
+
+    const fastMoving = [];
+    const slowMoving = [];
+    const critical = [];
+    const recommendations = [];
+
+    medicines.forEach(medicine => {
+      const medicineSales = history.filter(
+        h => h.medicineId && h.medicineId.toString() === medicine._id.toString()
+      );
+      const totalSales = medicineSales.reduce((sum, h) => sum + Math.abs(h.quantityChanged), 0);
+
+      const label = `${medicine.name} (Qty: ${medicine.quantity}, Sales: ${totalSales})`;
+
+      if (totalSales > 50) {
+        fastMoving.push(label);
+      } else if (totalSales < 5) {
+        slowMoving.push(label);
+      }
+
+      if (medicine.quantity <= medicine.reorderLevel / 2) {
+        critical.push(`${medicine.name} — only ${medicine.quantity} left (reorder: ${medicine.reorderLevel})`);
+        recommendations.push({
+          medicine: medicine.name,
+          action: 'Order Immediately',
+          quantity: medicine.reorderLevel * 2 - medicine.quantity,
+          priority: 'high',
+        });
+      } else if (medicine.quantity <= medicine.reorderLevel) {
+        recommendations.push({
+          medicine: medicine.name,
+          action: 'Order Soon',
+          quantity: medicine.reorderLevel - medicine.quantity,
+          priority: 'medium',
+        });
+      } else if (totalSales < 5 && medicine.quantity > medicine.reorderLevel * 3) {
+        recommendations.push({
+          medicine: medicine.name,
+          action: 'Reduce Procurement',
+          quantity: null,
+          priority: 'low',
+        });
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        fastMoving,
+        slowMoving,
+        critical,
+        recommendations,
+      },
+    });
+  } catch (error) {
+    log('ERROR', 'Get inventory intelligence error', { error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching inventory intelligence',
+      error: error.message,
+    });
+  }
+};
+

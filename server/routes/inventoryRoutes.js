@@ -12,6 +12,7 @@ import {
   getExpiredMedicines,
   adjustQuantity,
   getInventoryHistory,
+  getInventoryIntelligence,
 } from '../controllers/inventoryController.js';
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.get('/low-stock', protect, getLowStockMedicines);
 router.get('/near-expiry', protect, getNearExpiryMedicines);
 router.get('/expired', protect, getExpiredMedicines);
 router.get('/history', protect, authorize('owner', 'staff'), getInventoryHistory);
+router.get('/intelligence', protect, authorize('owner'), getInventoryIntelligence);
 router.get('/:id', protect, getMedicine);
 
 // Owner and Staff only

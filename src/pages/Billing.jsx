@@ -128,14 +128,14 @@ const Billing = () => {
     } else {
       // Add new item
       const newItem = {
-        medicineId: selectedMedicine.id,
+        medicineId: selectedMedicine._id,
         name: selectedMedicine.name,
-        batchNo: selectedMedicine.batchNo,
+        batchNo: selectedMedicine.batchNumber,
         expiryDate: selectedMedicine.expiryDate,
-        rackNo: selectedMedicine.rackNo,
-        price: selectedMedicine.price,
+        rackNo: selectedMedicine.rackNumber,
+        price: selectedMedicine.sellingPrice,
         quantity: quantity,
-        total: selectedMedicine.price * quantity
+        total: selectedMedicine.sellingPrice * quantity
       };
       setBillItems([...billItems, newItem]);
     }
@@ -157,7 +157,7 @@ const Billing = () => {
       return;
     }
 
-    const medicine = medicines.find(m => m.id === medicineId);
+    const medicine = medicines.find(m => m._id === medicineId);
     if (editQuantity > medicine.quantity) {
       return;
     }
@@ -203,7 +203,8 @@ const Billing = () => {
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        total: item.total
+        total: item.total,
+        batchNumber: item.batchNo
       })),
       subtotal,
       tax,
@@ -353,7 +354,12 @@ const Billing = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (selectedMedicine) {
+                      setSelectedMedicine(null);
+                    }
+                  }}
                   placeholder="Search by name or category..."
                   className="w-full pl-10 pr-16 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
@@ -384,7 +390,7 @@ const Billing = () => {
                   <div className="divide-y">
                     {sortByFEFO(filteredMedicines).map(medicine => (
                       <button
-                        key={medicine._id || medicine.id}
+                        key={medicine._id}
                         onClick={() => {
                           setSelectedMedicine(medicine);
                           setSearchTerm('');
@@ -396,10 +402,10 @@ const Billing = () => {
                             <p className="font-semibold text-gray-800">{medicine.name}</p>
                             <p className="text-sm text-gray-600">{medicine.category}</p>
                             <p className="text-xs text-gray-500 mt-1">
-                              Batch: {medicine.batchNo} | Rack: {medicine.rackNo} | Stock: {medicine.quantity}
+                              Batch: {medicine.batchNumber} | Rack: {medicine.rackNumber} | Stock: {medicine.quantity}
                             </p>
                           </div>
-                          <p className="font-bold text-primary-600">{formatCurrency(medicine.price)}</p>
+                          <p className="font-bold text-primary-600">{formatCurrency(medicine.sellingPrice)}</p>
                         </div>
                       </button>
                     ))}
@@ -416,16 +422,16 @@ const Billing = () => {
                     <p className="font-semibold text-gray-800">{selectedMedicine.name}</p>
                     <p className="text-sm text-gray-600">{selectedMedicine.category}</p>
                   </div>
-                  <p className="font-bold text-primary-600">{formatCurrency(selectedMedicine.price)}</p>
+                  <p className="font-bold text-primary-600">{formatCurrency(selectedMedicine.sellingPrice)}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                   <div>
                     <span className="text-gray-600">Batch:</span>
-                    <span className="ml-2 font-semibold">{selectedMedicine.batchNo}</span>
+                    <span className="ml-2 font-semibold">{selectedMedicine.batchNumber}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Rack:</span>
-                    <span className="ml-2 font-semibold">{selectedMedicine.rackNo}</span>
+                    <span className="ml-2 font-semibold">{selectedMedicine.rackNumber}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Expiry:</span>

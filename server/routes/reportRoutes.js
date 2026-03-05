@@ -17,6 +17,8 @@ router.get('/sales', protect, getSalesReport);
 router.get('/purchase', protect, getPurchaseReport);
 router.get('/inventory', protect, getInventoryReport);
 router.get('/forecast', protect, getDemandForecast);
+router.get('/demand', protect, getDemandForecast);
+
 router.get('/classification', protect, getStockClassification);
 
 export default router;

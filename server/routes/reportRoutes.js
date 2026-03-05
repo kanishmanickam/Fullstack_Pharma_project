@@ -7,12 +7,14 @@ import {
   getDemandForecast,
   getStockClassification,
   getDashboardSummary,
+  getDashboardAnalytics,
 } from '../controllers/reportController.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.get('/dashboard/summary', protect, getDashboardSummary);
+router.get('/dashboard/analytics', protect, getDashboardAnalytics);
 router.get('/sales', protect, getSalesReport);
 router.get('/purchase', protect, getPurchaseReport);
 router.get('/inventory', protect, getInventoryReport);
@@ -22,3 +24,4 @@ router.get('/demand', protect, getDemandForecast);
 router.get('/classification', protect, getStockClassification);
 
 export default router;
+

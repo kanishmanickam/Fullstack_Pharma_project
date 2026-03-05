@@ -1,5 +1,5 @@
-import { Medicine, Bill, InventoryHistory } from '../models/index.js';
-import { calculateDemandForecast, classifyMovement } from '../utils/helpers.js';
+import { Medicine, Bill, InventoryHistory, Alert } from '../models/index.js';
+import { calculateDemandForecast, classifyMovement, isNearExpiry } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 
 // Get sales report
@@ -249,6 +249,162 @@ export const getDashboardSummary = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching dashboard summary',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================
+// GET /api/reports/dashboard/analytics
+// Aggregated analytics payload for the Dashboard & Analytics
+// module: sales trend, stock distribution, forecast vs actual,
+// alert summary, and headline KPI metrics.
+// ============================================================
+export const getDashboardAnalytics = async (req, res) => {
+  try {
+    // ── Date windows ───────────────────────────────────────────
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    // ── 1. 30-day Sales Trend (aggregation) ────────────────────
+    const salesTrendRaw = await Bill.aggregate([
+      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+          },
+          revenue: { $sum: '$grandTotal' },
+          billCount: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Fill in zero-revenue days so the chart is continuous
+    const salesTrend = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const found = salesTrendRaw.find((s) => s._id === key);
+      salesTrend.push({
+        date: key,
+        revenue: found ? Math.round(found.revenue * 100) / 100 : 0,
+        billCount: found ? found.billCount : 0,
+      });
+    }
+
+    // ── 2. Stock Distribution (fast / slow / normal) ───────────
+    const [medicines, allSalesHistory] = await Promise.all([
+      Medicine.find().lean(),
+      InventoryHistory.find({ action: 'sale' }).lean(),
+    ]);
+
+    let fastMoving = 0;
+    let slowMoving = 0;
+    let normalMoving = 0;
+
+    medicines.forEach((med) => {
+      const movement = classifyMovement(med._id.toString(), allSalesHistory);
+      if (movement === 'fast_moving') fastMoving++;
+      else if (movement === 'slow_moving') slowMoving++;
+      else normalMoving++;
+    });
+
+    const stockDistribution = [
+      { name: 'Fast Moving', value: fastMoving, color: '#22c55e' },
+      { name: 'Slow Moving', value: slowMoving, color: '#f59e0b' },
+      { name: 'Normal', value: normalMoving, color: '#3b82f6' },
+    ];
+
+    // ── 3. Forecast vs Actual (last 7 days) ───────────────────
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    const recentSales = await InventoryHistory.find({
+      action: 'sale',
+      createdAt: { $gte: sevenDaysAgo },
+    }).lean();
+
+    // Group actual sales by day
+    const actualByDay = {};
+    recentSales.forEach((h) => {
+      const key = new Date(h.createdAt).toISOString().split('T')[0];
+      actualByDay[key] = (actualByDay[key] || 0) + Math.abs(h.quantityChanged);
+    });
+
+    // Build mock forecast using the calculateDemandForecast helper
+    const forecastRaw = calculateDemandForecast(recentSales, 7);
+    const forecastComparison = forecastRaw.map((f, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (6 - i));
+      const key = d.toISOString().split('T')[0];
+      return {
+        date: key,
+        predicted: f.predicted,
+        actual: actualByDay[key] || 0,
+      };
+    });
+
+    // ── 4. Active Alerts Summary ─────────────────────────────
+    const [criticalAlerts, warningAlerts, lowStockMeds, nearExpiryMeds] = await Promise.all([
+      Alert.countDocuments({ severity: 'critical', isResolved: false }),
+      Alert.countDocuments({ severity: 'warning', isResolved: false }),
+      Medicine.find({ $expr: { $lte: ['$quantity', '$reorderLevel'] } }).select('name quantity reorderLevel').lean(),
+      Medicine.find().lean().then((meds) => meds.filter((m) => isNearExpiry(m.expiryDate, 7))),
+    ]);
+
+    const alertSummary = {
+      critical: criticalAlerts,
+      warning: warningAlerts,
+      total: criticalAlerts + warningAlerts,
+    };
+
+    // ── 5. Today's Revenue KPI ────────────────────────────────
+    const todayBills = await Bill.find({ createdAt: { $gte: todayStart } }).lean();
+    const todayRevenue = todayBills.reduce((sum, b) => sum + b.grandTotal, 0);
+
+    // ── 6. Category list for filter dropdown ─────────────────
+    const categories = [...new Set(medicines.map((m) => m.category).filter(Boolean))].sort();
+
+    log('INFO', 'Dashboard analytics fetched', {
+      salesTrendDays: salesTrend.length,
+      totalMedicines: medicines.length,
+    });
+
+    res.status(200).json({
+      success: true,
+      analytics: {
+        kpis: {
+          totalMedicines: medicines.length,
+          lowStockCount: lowStockMeds.length,
+          nearExpiryCount: nearExpiryMeds.length,
+          todayRevenue: Math.round(todayRevenue * 100) / 100,
+          activeCriticalAlerts: criticalAlerts,
+          todayBillCount: todayBills.length,
+        },
+        salesTrend,
+        stockDistribution,
+        forecastComparison,
+        alertSummary,
+        lowStockMeds: lowStockMeds.slice(0, 10),
+        nearExpiryMeds: nearExpiryMeds
+          .slice(0, 10)
+          .map((m) => ({ _id: m._id, name: m.name, expiryDate: m.expiryDate, quantity: m.quantity })),
+        categories,
+      },
+    });
+  } catch (error) {
+    log('ERROR', 'Get dashboard analytics error', { error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching dashboard analytics',
       error: error.message,
     });
   }

@@ -1,94 +1,103 @@
-import { 
-  FaBrain, 
-  FaBell, 
-  FaBoxes, 
-  FaChartBar, 
-  FaShieldAlt, 
-  FaClock,
-  FaMobileAlt,
-  FaSync
+import {
+  FaBrain, FaBell, FaBoxes, FaChartBar, FaFileExcel,
+  FaShieldAlt, FaUsers, FaSync, FaMicrophoneAlt, FaFileMedical
 } from 'react-icons/fa';
 
-const Features = () => {
-  const features = [
-    {
-      icon: <FaBrain className="text-4xl text-primary-600" />,
-      title: "AI Demand Forecasting",
-      description: "Advanced machine learning models analyze historical data and seasonal patterns to predict future medicine demand with high accuracy."
-    },
-    {
-      icon: <FaBell className="text-4xl text-primary-600" />,
-      title: "Expiry & FEFO Management",
-      description: "Smart First-Expiry-First-Out algorithm ensures medicines nearing expiration are sold first, minimizing wastage and maintaining quality."
-    },
-    {
-      icon: <FaBoxes className="text-4xl text-primary-600" />,
-      title: "Low Stock Alerts",
-      description: "Real-time automated alerts notify you when inventory reaches critical levels, preventing stockouts and ensuring continuous availability."
-    },
-    {
-      icon: <FaChartBar className="text-4xl text-primary-600" />,
-      title: "Reports & Analytics",
-      description: "Comprehensive visual dashboards display sales trends, stock movements, expiry forecasts, and profitability insights for informed decisions."
-    },
-    {
-      icon: <FaShieldAlt className="text-4xl text-primary-600" />,
-      title: "Excel Upload & Validation",
-      description: "Bulk import inventory data from Excel files with automatic validation, duplicate detection, and error handling for seamless data migration."
-    },
-    {
-      icon: <FaClock className="text-4xl text-primary-600" />,
-      title: "Real-Time Dashboard",
-      description: "Live updates on stock levels, pending orders, expiring medicines, and sales metrics accessible from a centralized control panel."
-    },
-    {
-      icon: <FaMobileAlt className="text-4xl text-primary-600" />,
-      title: "Chatbot Assistant",
-      description: "AI-powered conversational assistant helps users query inventory, get medicine information, and receive personalized recommendations instantly."
-    },
-    {
-      icon: <FaSync className="text-4xl text-primary-600" />,
-      title: "Anomaly Detection",
-      description: "Intelligent monitoring identifies unusual stock patterns, suspicious transactions, and inventory discrepancies to prevent losses."
-    }
-  ];
+const features = [
+  {
+    icon: FaBrain,
+    color: 'from-purple-500 to-indigo-600',
+    badge: 'AI',
+    title: 'AI Demand Forecasting',
+    description: 'Gemini-powered AI analyses your sales history and auto-generates reorder recommendations with High / Medium / Low priority.',
+  },
+  {
+    icon: FaBell,
+    color: 'from-red-500 to-rose-600',
+    badge: 'Alerts',
+    title: 'Smart Alerts & Notifications',
+    description: 'Automatic alerts for low stock, near-expiry (7 days), expired medicines, and overstock — categorised by severity.',
+  },
+  {
+    icon: FaBoxes,
+    color: 'from-emerald-500 to-teal-600',
+    badge: 'Inventory',
+    title: 'FEFO Inventory Control',
+    description: 'First-Expiry-First-Out sorting ensures perishable medicines are used in the right order, minimising wastage.',
+  },
+  {
+    icon: FaChartBar,
+    color: 'from-blue-500 to-cyan-600',
+    badge: 'Reports',
+    title: 'Reports & Analytics',
+    description: 'Daily, weekly, and monthly Sales, Purchase, Inventory, and Financial reports with full data breakdowns.',
+  },
+  {
+    icon: FaFileExcel,
+    color: 'from-green-500 to-lime-600',
+    badge: 'Excel',
+    title: 'Excel Import & Export',
+    description: 'Bulk import inventory via drag-and-drop Excel upload. Export your full stock to a formatted .xlsx file in one click.',
+  },
+  {
+    icon: FaMicrophoneAlt,
+    color: 'from-orange-500 to-amber-600',
+    badge: 'Voice',
+    title: 'Voice & Bilingual Chatbot',
+    description: 'Ask inventory questions in English or Tamil — by typing or voice. The AI answers from live database data instantly.',
+  },
+  {
+    icon: FaFileMedical,
+    color: 'from-pink-500 to-rose-600',
+    badge: 'Billing',
+    title: 'Fast POS Billing',
+    description: 'POS-style billing with medicine search, auto price fill, tax calculation, and complete bill history.',
+  },
+  {
+    icon: FaShieldAlt,
+    color: 'from-slate-600 to-gray-700',
+    badge: 'Security',
+    title: 'Role-Based Access Control',
+    description: 'Owner and Staff roles with separate permissions. Every route and API endpoint is JWT-protected.',
+  },
+];
 
-  return (
-    <section id="features" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Key Features
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Comprehensive suite of intelligent tools designed to automate pharmacy operations, 
-            reduce medicine wastage, and ensure optimal stock availability.
-          </p>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-xl transition-all duration-300 group"
-            >
-              <div className="mb-4 group-hover:scale-110 transition-transform duration-300">
-                {feature.icon}
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
+const Features = () => (
+  <section id="features" className="py-24 bg-gray-50">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="text-center mb-16">
+        <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold mb-4">
+          Platform Features
+        </span>
+        <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+          Everything Your Pharmacy Needs
+        </h2>
+        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          A complete AI-powered toolkit purpose-built for modern pharmacy inventory management.
+        </p>
       </div>
-    </section>
-  );
-};
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {features.map((f, i) => (
+          <div key={i}
+            className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-primary-200 hover:shadow-xl transition-all duration-300 group cursor-default">
+            {/* Icon */}
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+              <f.icon className="text-white text-xl" />
+            </div>
+            {/* Badge */}
+            <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-semibold mb-2">
+              {f.badge}
+            </span>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{f.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
 
 export default Features;

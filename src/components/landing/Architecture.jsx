@@ -1,180 +1,98 @@
-import { Fragment } from 'react';
-import { FaArrowRight, FaDatabase, FaServer, FaBrain, FaLaptopCode } from 'react-icons/fa';
+import { FaReact, FaNodeJs, FaDatabase, FaShieldAlt } from 'react-icons/fa';
+import { SiVite, SiMongodb, SiExpress, SiTailwindcss, SiGooglegemini } from 'react-icons/si';
 
-const Architecture = () => {
-  const architectureFlow = [
-    {
-      icon: <FaLaptopCode className="text-4xl" />,
-      title: "React Frontend",
-      description: "Interactive UI with real-time updates",
-      color: "from-blue-500 to-blue-600"
-    },
-    {
-      icon: <FaServer className="text-4xl" />,
-      title: "Node.js + Express",
-      description: "RESTful API & Business Logic",
-      color: "from-green-500 to-green-600"
-    },
-    {
-      icon: <FaBrain className="text-4xl" />,
-      title: "AI Module",
-      description: "ML predictions & analytics",
-      color: "from-purple-500 to-purple-600"
-    },
-    {
-      icon: <FaDatabase className="text-4xl" />,
-      title: "MongoDB",
-      description: "Flexible data storage",
-      color: "from-emerald-500 to-emerald-600"
-    }
-  ];
+const layers = [
+  {
+    label: 'Frontend',
+    color: 'from-cyan-500 to-blue-600',
+    icon: FaReact,
+    items: [
+      { name: 'React 18', icon: FaReact, desc: 'Component-based UI' },
+      { name: 'Vite', icon: SiVite, desc: 'Lightning fast builds' },
+      { name: 'TailwindCSS', icon: SiTailwindcss, desc: 'Utility-first styling' },
+    ],
+  },
+  {
+    label: 'Backend',
+    color: 'from-green-500 to-emerald-600',
+    icon: FaNodeJs,
+    items: [
+      { name: 'Node.js', icon: FaNodeJs, desc: 'ES Module server' },
+      { name: 'Express', icon: SiExpress, desc: 'REST API layer' },
+      { name: 'JWT Auth', icon: FaShieldAlt, desc: 'Secure token auth' },
+    ],
+  },
+  {
+    label: 'Database',
+    color: 'from-green-600 to-teal-700',
+    icon: SiMongodb,
+    items: [
+      { name: 'MongoDB Atlas', icon: SiMongodb, desc: 'Cloud NoSQL database' },
+      { name: 'Mongoose ODM', icon: FaDatabase, desc: 'Schema & validation' },
+    ],
+  },
+  {
+    label: 'AI Layer',
+    color: 'from-purple-500 to-indigo-600',
+    icon: SiGooglegemini,
+    items: [
+      { name: 'Gemini 2.0 Flash', icon: SiGooglegemini, desc: 'Live inventory context' },
+    ],
+  },
+];
 
-  return (
-    <section id="architecture" className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            System Architecture
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            A modern three-tier architecture with React frontend, Node.js/Express backend, 
-            AI processing module, and MongoDB database—designed for scalability and real-time performance.
-          </p>
-        </div>
+const Architecture = () => (
+  <section id="architecture" className="py-24 bg-white">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-16">
+        <span className="inline-block px-4 py-1.5 bg-slate-100 text-slate-700 rounded-full text-sm font-semibold mb-4">
+          Architecture
+        </span>
+        <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+          Modern Full-Stack Architecture
+        </h2>
+        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          Clean separation of concerns with a secure backend proxy keeping your API keys safe.
+        </p>
+      </div>
 
-        {/* Architecture Flow */}
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-4 mb-16">
-          {architectureFlow.map((component, index) => (
-            <Fragment key={index}>
-              <div className="w-full lg:w-64">
-                <div className={`bg-gradient-to-br ${component.color} p-8 rounded-2xl shadow-xl text-white text-center transform hover:scale-105 transition-all duration-300`}>
-                  <div className="mb-4 flex justify-center">
-                    {component.icon}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {layers.map((layer, i) => (
+          <div key={i} className="rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
+            <div className={`bg-gradient-to-br ${layer.color} px-5 py-4 flex items-center gap-3`}>
+              <layer.icon className="text-white text-2xl" />
+              <span className="text-white font-bold text-lg">{layer.label}</span>
+            </div>
+            <div className="p-4 bg-gray-50 space-y-3">
+              {layer.items.map((item, j) => (
+                <div key={j} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-100">
+                  <item.icon className="text-gray-500 text-lg flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                    <p className="text-xs text-gray-500">{item.desc}</p>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">
-                    {component.title}
-                  </h3>
-                  <p className="text-sm text-white/90">
-                    {component.description}
-                  </p>
                 </div>
-              </div>
-              {index < architectureFlow.length - 1 && (
-                <div className="hidden lg:block">
-                  <FaArrowRight className="text-3xl text-gray-400" />
-                </div>
-              )}
-              {index < architectureFlow.length - 1 && (
-                <div className="lg:hidden">
-                  <div className="h-8 w-1 bg-gray-300 mx-auto"></div>
-                </div>
-              )}
-            </Fragment>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Flow diagram */}
+      <div className="bg-gray-900 rounded-2xl p-8 text-center">
+        <p className="text-gray-400 text-sm mb-6 font-medium uppercase tracking-widest">Request Flow</p>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-sm font-mono">
+          {['Browser (React)', '→', 'Vite Dev / Vercel', '→', 'Express API', '→', 'MongoDB Atlas', '↕', 'Gemini AI (server-side)'].map((item, i) => (
+            <span key={i} className={item === '→' || item === '↕'
+              ? 'text-gray-500 text-xl'
+              : 'bg-white/10 border border-white/20 text-white rounded-lg px-4 py-2'}>
+              {item}
+            </span>
           ))}
         </div>
-
-        {/* Architecture Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Frontend Layer - React
-            </h3>
-            <ul className="space-y-3 text-gray-700">
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Interactive dashboard with real-time updates</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Responsive UI built with React hooks and components</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Tailwind CSS for modern, mobile-first design</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Charts and visualizations for analytics</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Backend Layer - Node.js & Express
-            </h3>
-            <ul className="space-y-3 text-gray-700">
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>RESTful API endpoints for all operations</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>JWT-based authentication and role management</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Business logic and validation middleware</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Integration with AI module and database</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              AI Module - Python
-            </h3>
-            <ul className="space-y-3 text-gray-700">
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Machine learning models for demand prediction</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>FEFO algorithm for expiry management</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Anomaly detection for unusual patterns</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>LLM-based chatbot for user assistance</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Database Layer - MongoDB
-            </h3>
-            <ul className="space-y-3 text-gray-700">
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>NoSQL document storage for flexible schemas</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Collections for medicines, users, orders, alerts</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Mongoose ODM for data modeling and validation</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-600 font-bold">•</span>
-                <span>Indexing for fast query performance</span>
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export default Architecture;

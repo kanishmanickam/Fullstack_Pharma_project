@@ -1,75 +1,36 @@
-import { FaUsers, FaHospital, FaClinicMedical, FaStore } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaGraduationCap, FaRocket } from 'react-icons/fa';
 
-const About = () => {
-  const targetUsers = [
-    {
-      icon: <FaUsers className="text-4xl text-primary-600" />,
-      title: "Pharmacists",
-      description: "Manage prescriptions and inventory efficiently"
-    },
-    {
-      icon: <FaStore className="text-4xl text-primary-600" />,
-      title: "Pharmacy Store Managers",
-      description: "Oversee operations and stock management"
-    },
-    {
-      icon: <FaHospital className="text-4xl text-primary-600" />,
-      title: "Hospital Inventory Staff",
-      description: "Control medical supply chains"
-    },
-    {
-      icon: <FaClinicMedical className="text-4xl text-primary-600" />,
-      title: "Healthcare Centers",
-      description: "Maintain essential medicine availability"
-    }
-  ];
+const About = () => (
+  <section id="about" className="py-24 bg-white">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span className="inline-block px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-5">
+        About This Project
+      </span>
+      <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
+        Built to Solve a Real Problem
+      </h2>
+      <p className="text-lg text-gray-500 leading-relaxed mb-6 max-w-3xl mx-auto">
+        <strong>MediStock AI</strong> was built as an academic capstone project to address real-world inefficiencies in
+        pharmacy inventory management — expired medicines, manual stocktaking, and reactive ordering.
+      </p>
+      <p className="text-lg text-gray-500 leading-relaxed mb-10 max-w-3xl mx-auto">
+        It combines a full-stack MERN architecture with Google Gemini AI to deliver a system that doesn't just store data,
+        but actively helps pharmacists make smarter decisions through live AI insights, automated alerts, and intuitive tools.
+      </p>
 
-  return (
-    <section className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* About Section */}
-        <div className="max-w-4xl mx-auto text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            About the Product
-          </h2>
-          <p className="text-lg text-gray-700 leading-relaxed">
-            <strong>MediStock AI</strong> is an intelligent pharmacy inventory management system built to solve 
-            the challenges of manual stock tracking, medicine expiry, and unexpected stockouts. Designed specifically 
-            for <strong>pharmacies, hospitals, and healthcare clinics</strong>, this MERN stack application combines 
-            artificial intelligence with modern web technologies to automate inventory operations. It addresses critical 
-            problems such as expired medicine wastage, inaccurate demand planning, inefficient stock management, and 
-            lack of real-time visibility—helping healthcare providers deliver better patient care while reducing 
-            operational costs and improving profitability.
-          </p>
-        </div>
-
-        {/* Target Users */}
-        <div className="mb-12">
-          <h3 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            Who Can Use MediStock AI?
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {targetUsers.map((user, index) => (
-              <div
-                key={index}
-                className="bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl text-center hover:shadow-lg transition-all"
-              >
-                <div className="mb-4 flex justify-center">
-                  {user.icon}
-                </div>
-                <h4 className="text-lg font-bold text-gray-900 mb-2">
-                  {user.title}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {user.description}
-                </p>
-              </div>
-            ))}
-          </div>
+      {/* CTA */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <Link to="/login"
+          className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition-all">
+          <FaRocket /> Try the App
+        </Link>
+        <div className="flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl font-semibold text-lg">
+          <FaGraduationCap /> Academic Project — Demo Version
         </div>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export default About;

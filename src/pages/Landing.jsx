@@ -1,37 +1,27 @@
-import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/landing/Navbar';
+import Hero from '../components/landing/Hero';
+import Features from '../components/landing/Features';
+import AISection from '../components/landing/AISection';
+import UseCases from '../components/landing/UseCases';
+import Architecture from '../components/landing/Architecture';
+import TechStack from '../components/landing/TechStack';
+import About from '../components/landing/About';
+import Footer from '../components/landing/Footer';
 
 const Landing = () => {
-  const navigate = useNavigate();
-
-  const handleGetStarted = () => {
-    navigate('/login');
-  };
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'white' }}>
-      <div style={{ padding: '20px', textAlign: 'center', marginTop: '50px' }}>
-        <h1 style={{ fontSize: '48px', color: '#00684a', marginBottom: '20px' }}>
-          MediStock AI
-        </h1>
-        <p style={{ fontSize: '20px', color: '#666', marginBottom: '20px' }}>
-          Smart Pharmacy Inventory Management System
-        </p>
-        <button 
-          onClick={handleGetStarted}
-          style={{
-            backgroundColor: '#00684a',
-            color: 'white',
-            padding: '12px 24px',
-            fontSize: '16px',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          Get Started
-        </button>
-      </div>
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <Navbar />
+      <main>
+        <Hero />
+        <Features />
+        <AISection />
+        <UseCases />
+        <Architecture />
+        <TechStack />
+        <About />
+      </main>
+      <Footer />
     </div>
   );
 };

@@ -1,139 +1,88 @@
-import { FaHospital, FaPills, FaStore, FaCheckCircle } from 'react-icons/fa';
+import { FaHospital, FaClinicMedical, FaStore, FaCheckCircle } from 'react-icons/fa';
 
-const UseCases = () => {
-  const useCases = [
-    {
-      icon: <FaHospital className="text-5xl text-primary-600" />,
-      title: "Reduces Medicine Wastage",
-      description: "FEFO algorithm and expiry alerts ensure medicines are used before expiration, significantly reducing losses from expired stock.",
-      benefits: [
-        "Prioritize medicines nearing expiry",
-        "Automated expiry notifications",
-        "Track and minimize waste metrics"
-      ]
-    },
-    {
-      icon: <FaPills className="text-5xl text-primary-600" />,
-      title: "Prevents Stockouts",
-      description: "AI forecasting and low stock alerts ensure critical medicines are always available, preventing emergency shortages.",
-      benefits: [
-        "Predictive restocking recommendations",
-        "Real-time inventory visibility",
-        "Never miss critical medications"
-      ]
-    },
-    {
-      icon: <FaStore className="text-5xl text-primary-600" />,
-      title: "Improves Patient Safety",
-      description: "Ensure medicine quality and availability through intelligent monitoring, expiry management, and anomaly detection.",
-      benefits: [
-        "Prevent expired medicine dispensing",
-        "Maintain optimal stock levels",
-        "Track medicine authenticity"
-      ]
-    }
-  ];
+const cases = [
+  {
+    icon: FaStore,
+    color: 'bg-emerald-500',
+    who: 'Retail Pharmacies',
+    tagline: 'Never run out of bestsellers',
+    points: [
+      'Track hundreds of SKUs with FEFO sorting',
+      'Auto-generate low-stock alerts per medicine',
+      'Bulk import stock updates via Excel',
+      'Print bills and track daily revenue',
+    ],
+  },
+  {
+    icon: FaHospital,
+    color: 'bg-blue-500',
+    who: 'Hospital Pharmacies',
+    tagline: 'Precision inventory for patient safety',
+    points: [
+      'Monitor near-expiry medicines daily',
+      'Role-based access for pharmacists vs admins',
+      'Prescription records linked to dispensing',
+      'Demand forecasting by ward/department',
+    ],
+  },
+  {
+    icon: FaClinicMedical,
+    color: 'bg-purple-500',
+    who: 'Clinic Dispensaries',
+    tagline: 'Lean inventory, zero waste',
+    points: [
+      'AI chatbot answers stock queries instantly',
+      'Tamil language support for local staff',
+      'Expiry reports to plan procurement',
+      'Compact dashboard for small teams',
+    ],
+  },
+];
 
-  return (
-    <section className="py-20 bg-gradient-to-br from-gray-50 to-primary-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Why Choose MediStock AI?
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Designed for pharmacies, hospitals, and healthcare centers to eliminate manual errors, 
-            improve patient safety, and make data-driven inventory decisions.
-          </p>
-        </div>
-
-        {/* Use Cases Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {useCases.map((useCase, index) => (
-            <div
-              key={index}
-              className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300"
-            >
-              <div className="mb-6">
-                {useCase.icon}
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                {useCase.title}
-              </h3>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                {useCase.description}
-              </p>
-              <div className="space-y-3">
-                {useCase.benefits.map((benefit, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <FaCheckCircle className="text-primary-600 mt-1 flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 text-center">
-          <div className="bg-primary-600 rounded-2xl p-10 shadow-xl">
-            <h3 className="text-3xl font-bold text-white mb-4">
-              Expected Outcomes & Benefits
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto mb-8">
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Real-Time Stock Visibility</h4>
-                  <p className="text-primary-100 text-sm">Access live inventory data anytime, anywhere with centralized dashboard</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Automated Alerts</h4>
-                  <p className="text-primary-100 text-sm">Receive instant notifications for expiry, low stock, and anomalies</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Accurate Predictions</h4>
-                  <p className="text-primary-100 text-sm">AI forecasting provides precise demand estimates for better planning</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Reduced Losses</h4>
-                  <p className="text-primary-100 text-sm">Minimize wastage from expiry and overstocking through intelligent management</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Faster Decision-Making</h4>
-                  <p className="text-primary-100 text-sm">Data-driven insights enable quick, informed business decisions</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FaCheckCircle className="text-primary-100 mt-1 flex-shrink-0 text-xl" />
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Automated Operations</h4>
-                  <p className="text-primary-100 text-sm">Eliminate manual tracking and paperwork with digital automation</p>
-                </div>
-              </div>
-            </div>
-            <button className="bg-white text-primary-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-all font-semibold text-lg shadow-lg">
-              Explore the System
-            </button>
-          </div>
-        </div>
+const UseCases = () => (
+  <section id="usecases" className="py-24 bg-gray-50">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-16">
+        <span className="inline-block px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-4">
+          Use Cases
+        </span>
+        <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+          Built for Every Pharmacy Setting
+        </h2>
+        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          Whether you run a single counter or a hospital chain, MediStock AI scales to your needs.
+        </p>
       </div>
-    </section>
-  );
-};
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {cases.map((c, i) => (
+          <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
+            {/* Top bar */}
+            <div className={`${c.color} px-6 py-5 flex items-center gap-4`}>
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <c.icon className="text-white text-2xl" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg">{c.who}</p>
+                <p className="text-white/80 text-sm">{c.tagline}</p>
+              </div>
+            </div>
+            {/* Points */}
+            <div className="p-6">
+              <ul className="space-y-3">
+                {c.points.map((p, j) => (
+                  <li key={j} className="flex items-start gap-3">
+                    <FaCheckCircle className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-600 text-sm">{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
 
 export default UseCases;

@@ -1,121 +1,71 @@
-import { FaGithub, FaLinkedin, FaEnvelope, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import logo from '../../assets/logo.png';
+import { FaEnvelope, FaGithub, FaLinkedin } from 'react-icons/fa';
 
-const Footer = () => {
-  return (
-    <footer id="contact" className="bg-gray-900 text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Company Info */}
-          <div>
-            <h3 className="text-2xl font-bold text-white mb-4">
-              MediStock <span className="text-primary-500">AI</span>
-            </h3>
-            <p className="text-gray-400 mb-2 font-semibold">
-              Smart Pharmacy Inventory Management
-            </p>
-            <p className="text-gray-400 mb-4 text-sm">
-              AI-powered solution for pharmacies, hospitals, and healthcare centers.
-              Automate inventory, reduce wastage, and ensure medicine availability.
-            </p>
-            <p className="text-gray-500 text-sm italic">
-              🎓 Academic Project | College Capstone
-            </p>
-            <div className="flex gap-4 mt-4">
-              <a href="#" className="text-gray-400 hover:text-primary-500 transition-colors">
-                <FaGithub size={24} />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-primary-500 transition-colors">
-                <FaLinkedin size={24} />
-              </a>
-            </div>
+const Footer = () => (
+  <footer className="bg-gray-950 text-gray-400">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+
+        {/* Brand */}
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-3 mb-4">
+            <img src={logo} alt="MediStock AI" className="h-10 w-auto" />
+            <span className="text-2xl font-bold text-white">
+              MediStock <span className="text-primary-400">AI</span>
+            </span>
           </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#home" className="hover:text-primary-500 transition-colors">Home</a>
-              </li>
-              <li>
-                <a href="#features" className="hover:text-primary-500 transition-colors">Features</a>
-              </li>
-              <li>
-                <a href="#architecture" className="hover:text-primary-500 transition-colors">Architecture</a>
-              </li>
-              <li>
-                <a href="#techstack" className="hover:text-primary-500 transition-colors">Tech Stack</a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Resources</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#" className="hover:text-primary-500 transition-colors">Documentation</a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-primary-500 transition-colors">API Reference</a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-primary-500 transition-colors">Support</a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-primary-500 transition-colors">Privacy Policy</a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Contact Us</h4>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <FaEnvelope className="mt-1 text-primary-500 flex-shrink-0" />
-                <span>info@medistock-ai.com</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <FaPhone className="mt-1 text-primary-500 flex-shrink-0" />
-                <span>+1 (555) 123-4567</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <FaMapMarkerAlt className="mt-1 text-primary-500 flex-shrink-0" />
-                <span>123 Healthcare St, Medical District, NY 10001</span>
-              </li>
-            </ul>
+          <p className="text-gray-500 leading-relaxed mb-5 max-w-sm">
+            An AI-powered pharmacy inventory management system built for modern pharmacies.
+            Smart. Fast. Bilingual.
+          </p>
+          <div className="flex gap-3">
+            <a href="mailto:prjnkrthk@gmail.com" className="w-9 h-9 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">
+              <FaEnvelope className="text-sm" />
+            </a>
+            <a href="https://github.com" target="_blank" rel="noreferrer" className="w-9 h-9 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">
+              <FaGithub className="text-sm" />
+            </a>
+            <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="w-9 h-9 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">
+              <FaLinkedin className="text-sm" />
+            </a>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            {/* Copyright */}
-            <div className="text-center md:text-left">
-              <p className="text-gray-400">
-                © {new Date().getFullYear()} MediStock AI. All rights reserved.
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                College Project - Educational Purpose
-              </p>
-            </div>
+        {/* Features */}
+        <div>
+          <h4 className="text-white font-semibold mb-4">Features</h4>
+          <ul className="space-y-2 text-sm">
+            {['AI Chatbot', 'FEFO Sorting', 'Demand Forecasting', 'Excel Import/Export', 'Smart Alerts', 'Role-Based Access'].map(f => (
+              <li key={f}><span className="hover:text-white transition-colors cursor-default">{f}</span></li>
+            ))}
+          </ul>
+        </div>
 
-            {/* Team Info */}
-            <div className="text-center md:text-right">
-              <p className="text-gray-400">
-                Built with ❤️ by Team MediStock
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                MERN Stack + AI | Academic Portfolio 2026
-              </p>
-            </div>
-          </div>
+        {/* Quick Links */}
+        <div>
+          <h4 className="text-white font-semibold mb-4">Quick Links</h4>
+          <ul className="space-y-2 text-sm">
+            <li><Link to="/login" className="hover:text-white transition-colors">Login</Link></li>
+            <li><button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              className="hover:text-white transition-colors">Features</button></li>
+            <li><button onClick={() => document.getElementById('ai')?.scrollIntoView({ behavior: 'smooth' })}
+              className="hover:text-white transition-colors">AI Chatbot</button></li>
+            <li><button onClick={() => document.getElementById('architecture')?.scrollIntoView({ behavior: 'smooth' })}
+              className="hover:text-white transition-colors">Architecture</button></li>
+            <li><button onClick={() => document.getElementById('techstack')?.scrollIntoView({ behavior: 'smooth' })}
+              className="hover:text-white transition-colors">Tech Stack</button></li>
+          </ul>
         </div>
       </div>
-    </footer>
-  );
-};
+
+      {/* Bottom bar */}
+      <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+        <p>© {new Date().getFullYear()} MediStock AI. All rights reserved.</p>
+        <p className="text-gray-600">Built with ❤️ — Academic Capstone Project</p>
+      </div>
+    </div>
+  </footer>
+);
 
 export default Footer;

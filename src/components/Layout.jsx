@@ -42,7 +42,9 @@ const Layout = ({ children }) => {
       <aside className="w-64 bg-white shadow-lg fixed h-full overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-1">
-            <img src={logo} alt="MediStock Logo" className="h-9 w-auto" />
+            <div className="h-9 w-9 rounded-xl overflow-hidden bg-primary-50 border border-primary-100 shadow-sm flex-shrink-0">
+              <img src={logo} alt="MediStock Logo" className="h-full w-full object-cover" />
+            </div>
             <h1 className="text-xl font-bold text-gray-900">
               MediStock <span className="text-primary-600">AI</span>
             </h1>

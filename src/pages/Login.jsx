@@ -30,7 +30,9 @@ const Login = () => {
         {/* Left Side - Branding */}
         <div className="flex flex-col justify-center">
           <div className="mb-8">
-            <img src={logo} alt="MediStock Logo" className="h-20 w-auto mb-4" />
+            <div className="h-24 w-24 rounded-3xl overflow-hidden shadow-xl border border-primary-100 bg-white mb-6">
+              <img src={logo} alt="MediStock Logo" className="h-full w-full object-cover" />
+            </div>
             <h1 className="text-5xl font-bold text-gray-900 mb-3">
               MediStock <span className="text-primary-600">AI</span>
             </h1>

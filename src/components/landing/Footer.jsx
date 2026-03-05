@@ -10,7 +10,9 @@ const Footer = () => (
         {/* Brand */}
         <div className="md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
-            <img src={logo} alt="MediStock AI" className="h-10 w-auto" />
+            <div className="h-10 w-10 rounded-xl overflow-hidden border border-white/20 shadow-md bg-white/10 flex-shrink-0">
+              <img src={logo} alt="MediStock AI" className="h-full w-full object-cover" />
+            </div>
             <span className="text-2xl font-bold text-white">
               MediStock <span className="text-primary-400">AI</span>
             </span>

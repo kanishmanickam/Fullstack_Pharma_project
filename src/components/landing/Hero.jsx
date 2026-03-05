@@ -24,7 +24,9 @@ const Hero = () => {
         <div className="text-center">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <img src={logo} alt="MediStock AI" className="h-20 w-auto drop-shadow-2xl" />
+            <div className="h-24 w-24 mx-auto rounded-3xl overflow-hidden border-2 border-white/30 shadow-2xl bg-white/10 backdrop-blur-sm">
+              <img src={logo} alt="MediStock AI" className="h-full w-full object-cover" />
+            </div>
           </div>
 
           {/* Badge */}

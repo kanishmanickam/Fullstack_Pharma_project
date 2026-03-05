@@ -33,7 +33,9 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <img src={logo} alt="MediStock" className="h-9 w-auto" />
+            <div className="h-9 w-9 rounded-xl overflow-hidden bg-white shadow-md flex-shrink-0">
+              <img src={logo} alt="MediStock" className="h-full w-full object-cover" />
+            </div>
             <span className={`text-xl font-bold transition-colors ${scrolled ? 'text-gray-900' : 'text-white'}`}>
               MediStock <span className="text-primary-500">AI</span>
             </span>

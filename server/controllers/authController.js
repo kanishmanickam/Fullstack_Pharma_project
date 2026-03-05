@@ -1,6 +1,7 @@
 import { User } from '../models/index.js';
 import { generateToken } from '../utils/helpers.js';
 import log from '../utils/logger.js';
+import { createAuditEntry } from '../middleware/auditLogger.js';
 
 // Register new user (Owner only - for adding staff)
 export const register = async (req, res) => {
@@ -119,6 +120,19 @@ export const login = async (req, res) => {
 
     // Generate token with complete user info
     const token = generateToken(user);
+
+    // ── Explicit audit hook: USER_LOGIN ───────────────────────
+    createAuditEntry({
+      userId: user._id,
+      username: user.username,
+      action: 'USER_LOGIN',
+      module: 'System',
+      details: { role: user.role },
+      ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown',
+      httpMethod: 'POST',
+      endpoint: '/api/auth/login',
+      statusCode: 200,
+    }); // fire-and-forget
 
     log('INFO', 'User logged in successfully', { userId: user._id, role: user.role });
 

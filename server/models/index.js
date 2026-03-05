@@ -574,6 +574,94 @@ const orderSchema = new mongoose.Schema(
 
 const Order = mongoose.model('Order', orderSchema);
 
+// ============ AUDIT LOG SCHEMA ============
+const auditLogSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    // Denormalised: readable even if user account is later deleted
+    username: {
+      type: String,
+      default: 'system',
+    },
+    action: {
+      type: String,
+      enum: [
+        'USER_LOGIN',
+        'USER_CREATED',
+        'USER_UPDATED',
+        'USER_DELETED',
+        'STOCK_UPDATE',
+        'MEDICINE_CREATED',
+        'MEDICINE_DELETED',
+        'BILL_GENERATED',
+        'EXCEL_UPLOAD',
+        'ALERT_RESOLVED',
+        'SUPPLIER_CREATED',
+        'ORDER_CREATED',
+        'ORDER_STATUS_UPDATE',
+        'REORDER_APPROVED',
+        'DELETE',
+        'OTHER',
+      ],
+      default: 'OTHER',
+    },
+    module: {
+      type: String,
+      enum: [
+        'Inventory',
+        'Billing',
+        'UserManagement',
+        'DataImport',
+        'Alerts',
+        'Orders',
+        'Suppliers',
+        'System',
+      ],
+      default: 'System',
+    },
+    details: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    ipAddress: {
+      type: String,
+      default: 'unknown',
+    },
+    httpMethod: {
+      type: String,
+      default: '',
+    },
+    endpoint: {
+      type: String,
+      default: '',
+    },
+    statusCode: {
+      type: Number,
+      default: 200,
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    // No timestamps option — we use our own `timestamp` field
+    // Disable update operations at schema level (belt-and-suspenders)
+    versionKey: false,
+  }
+);
+
+// Index for fast filtering by common query patterns
+auditLogSchema.index({ timestamp: -1 });
+auditLogSchema.index({ userId: 1, timestamp: -1 });
+auditLogSchema.index({ module: 1, timestamp: -1 });
+
+const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+
 export {
   User,
   Medicine,
@@ -587,4 +675,5 @@ export {
   Prescription,
   Order,
   // Supplier moved to supplierModels.js
+  AuditLog,
 };

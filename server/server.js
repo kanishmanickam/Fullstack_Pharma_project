@@ -18,6 +18,8 @@ import prescriptionRoutes from './routes/prescriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
+import { auditLogger } from './middleware/auditLogger.js';
 
 // Load environment variables
 dotenv.config();
@@ -58,9 +60,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
+app.use(auditLogger);  // async fire-and-forget — logs after response is sent
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/audit', auditRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/customers', customerRoutes);

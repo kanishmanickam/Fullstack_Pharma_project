@@ -32,6 +32,7 @@ import {
   FaFilter,
   FaSyncAlt,
   FaBell,
+  FaList,
 } from 'react-icons/fa';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -559,6 +560,9 @@ export default function Dashboard() {
               </>
             )}
             <NavCard to="/customers" icon={<FaBoxes />} label="Customers" color="teal" />
+            {isOwner && (
+              <NavCard to="/activity-log" icon={<FaList />} label="Activity Log" color="red" />
+            )}
           </div>
         </section>
       </div>

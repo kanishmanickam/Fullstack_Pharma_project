@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { Medicine, UploadLog } from '../models/index.js';
 import { detectAnomalies } from '../utils/helpers.js';
 import log from '../utils/logger.js';
+import { createAuditEntry } from '../middleware/auditLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,29 @@ export const uploadExcel = async (req, res) => {
 
     // Clean up file
     fs.unlinkSync(filePath);
+
+    // ── Explicit audit hook: captures file name + record counts ──
+    // Must be called explicitly (not by global middleware) because we
+    // need fine-grained details: fileName, success/fail counts, anomalies
+    createAuditEntry({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'EXCEL_UPLOAD',
+      module: 'DataImport',
+      details: {
+        fileName: req.file.originalname,
+        fileSizeBytes: req.file.size,
+        totalRecords: data.length,
+        recordsSuccessful,
+        recordsFailed,
+        anomalyCount: anomalies.length,
+        uploadLogId: uploadLog._id,
+      },
+      ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown',
+      httpMethod: 'POST',
+      endpoint: req.path,
+      statusCode: 200,
+    }); // fire-and-forget — intentionally not awaited
 
     log('INFO', 'Excel file uploaded and processed', {
       fileName: req.file.originalname,

@@ -1,0 +1,437 @@
+import { useState, useEffect, useCallback } from 'react';
+import Layout from '../components/Layout';
+import axiosInstance from '../utils/axiosConfig';
+import {
+    FaShieldAlt,
+    FaSearch,
+    FaFilter,
+    FaSyncAlt,
+    FaUser,
+    FaCalendarAlt,
+    FaChevronLeft,
+    FaChevronRight,
+    FaExclamationTriangle,
+    FaDownload,
+} from 'react-icons/fa';
+
+// ── Action badge colours ─────────────────────────────────────────
+const ACTION_STYLES = {
+    USER_LOGIN: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    USER_CREATED: { bg: 'bg-green-100', text: 'text-green-700' },
+    USER_UPDATED: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+    USER_DELETED: { bg: 'bg-red-100', text: 'text-red-700' },
+    EXCEL_UPLOAD: { bg: 'bg-purple-100', text: 'text-purple-700' },
+    BILL_GENERATED: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+    STOCK_UPDATE: { bg: 'bg-cyan-100', text: 'text-cyan-700' },
+    MEDICINE_CREATED: { bg: 'bg-teal-100', text: 'text-teal-700' },
+    MEDICINE_DELETED: { bg: 'bg-red-100', text: 'text-red-700' },
+    ALERT_RESOLVED: { bg: 'bg-orange-100', text: 'text-orange-700' },
+    SUPPLIER_CREATED: { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+    ORDER_CREATED: { bg: 'bg-violet-100', text: 'text-violet-700' },
+    ORDER_STATUS_UPDATE: { bg: 'bg-fuchsia-100', text: 'text-fuchsia-700' },
+    REORDER_APPROVED: { bg: 'bg-lime-100', text: 'text-lime-700' },
+    DELETE: { bg: 'bg-red-200', text: 'text-red-800' },
+    OTHER: { bg: 'bg-gray-100', text: 'text-gray-600' },
+};
+
+const MODULE_OPTIONS = [
+    'Inventory', 'Billing', 'UserManagement', 'DataImport',
+    'Alerts', 'Orders', 'Suppliers', 'System',
+];
+
+// Human-readable labels for each action enum value
+const ACTION_OPTIONS = [
+    { value: 'USER_LOGIN', label: '🔑 User Login' },
+    { value: 'USER_CREATED', label: '👤 User Created' },
+    { value: 'USER_UPDATED', label: '✏️ User Updated' },
+    { value: 'USER_DELETED', label: '🗑️ User Deleted' },
+    { value: 'EXCEL_UPLOAD', label: '📤 Excel Bulk Upload' },
+    { value: 'BILL_GENERATED', label: '🧾 Bill Generated' },
+    { value: 'STOCK_UPDATE', label: '📦 Stock Update' },
+    { value: 'MEDICINE_CREATED', label: '💊 Medicine Created' },
+    { value: 'MEDICINE_DELETED', label: '❌ Medicine Deleted' },
+    { value: 'ALERT_RESOLVED', label: '✅ Alert Resolved' },
+    { value: 'SUPPLIER_CREATED', label: '🏭 Supplier Created' },
+    { value: 'ORDER_CREATED', label: '🛒 Order Created' },
+    { value: 'ORDER_STATUS_UPDATE', label: '🔄 Order Status Update' },
+    { value: 'REORDER_APPROVED', label: '🔁 Reorder Approved' },
+    { value: 'DELETE', label: '🗑️ Delete' },
+    { value: 'OTHER', label: '⚙️ Other' },
+];
+
+// ── Helpers ─────────────────────────────────────────────────────
+const fmtDate = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+};
+
+const detailsText = (details) => {
+    if (!details || typeof details !== 'object') return String(details || '—');
+    const parts = [];
+    if (details.fileName) parts.push(`File: ${details.fileName}`);
+    if (details.recordsSuccessful !== undefined) parts.push(`✓ ${details.recordsSuccessful} ok`);
+    if (details.recordsFailed !== undefined) parts.push(`✗ ${details.recordsFailed} failed`);
+    if (details.role) parts.push(`Role: ${details.role}`);
+    if (details.body && typeof details.body === 'object') {
+        const keys = Object.keys(details.body).filter(k => !['password', 'token'].includes(k)).slice(0, 3);
+        keys.forEach(k => parts.push(`${k}: ${String(details.body[k]).slice(0, 30)}`));
+    }
+    return parts.length ? parts.join('  ·  ') : JSON.stringify(details).slice(0, 80);
+};
+
+// ── Stat Card ────────────────────────────────────────────────────
+function StatCard({ label, value, icon, colorClass }) {
+    return (
+        <div className={`bg-white rounded-xl shadow-sm p-4 border-l-4 ${colorClass} flex items-center gap-3`}>
+            <div className="text-2xl opacity-70">{icon}</div>
+            <div>
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{label}</p>
+                <p className="text-xl font-bold text-gray-900">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+// ── Action Badge ─────────────────────────────────────────────────
+function ActionBadge({ action }) {
+    const style = ACTION_STYLES[action] || ACTION_STYLES.OTHER;
+    const found = ACTION_OPTIONS.find(a => a.value === action);
+    const label = found ? found.label : action;
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style.bg} ${style.text}`}>
+            {label}
+        </span>
+    );
+}
+
+// ── Main Component ───────────────────────────────────────────────
+export default function ActivityLog() {
+    const [logs, setLogs] = useState([]);
+    const [stats, setStats] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(1);
+    const [total, setTotal] = useState(0);
+    const LIMIT = 20;
+
+    // Filters
+    const [filters, setFilters] = useState({
+        username: '',
+        module: '',
+        action: '',
+        startDate: '',
+        endDate: '',
+    });
+    const [applied, setApplied] = useState({});
+
+    // ── Fetch ──────────────────────────────────────────────────────
+    const fetchLogs = useCallback(async (currentFilters, currentPage, isRefresh = false) => {
+        try {
+            isRefresh ? setRefreshing(true) : setLoading(true);
+            setError(null);
+
+            const params = { page: currentPage, limit: LIMIT };
+            Object.entries(currentFilters).forEach(([k, v]) => { if (v) params[k] = v; });
+
+            const [logsRes, statsRes, usersRes] = await Promise.all([
+                axiosInstance.get('/audit', { params }),
+                axiosInstance.get('/audit/stats'),
+                axiosInstance.get('/auth/users'),
+            ]);
+
+            setLogs(logsRes.data.logs);
+            setTotal(logsRes.data.total);
+            setPages(logsRes.data.pages);
+            setStats(statsRes.data.stats);
+            if (usersRes.data.users) setUsers(usersRes.data.users);
+        } catch (err) {
+            console.error('Audit log error:', err);
+            setError('Failed to load audit logs. Make sure you have owner access.');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchLogs(applied, page);
+    }, [fetchLogs, applied, page]);
+
+    const applyFilters = () => {
+        setApplied({ ...filters });
+        setPage(1);
+    };
+
+    const resetFilters = () => {
+        const empty = { username: '', module: '', action: '', startDate: '', endDate: '' };
+        setFilters(empty);
+        setApplied(empty);
+        setPage(1);
+    };
+
+    const handleRefresh = () => fetchLogs(applied, page, true);
+
+    // ─────────────────────────────────────────────────────────────
+    if (loading) {
+        return (
+            <Layout>
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                        <p className="text-gray-500 text-sm">Loading activity logs…</p>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (error) {
+        return (
+            <Layout>
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                        <FaExclamationTriangle className="text-4xl text-red-400 mx-auto mb-3" />
+                        <p className="text-red-600 font-medium">{error}</p>
+                        <button onClick={handleRefresh} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    return (
+        <Layout>
+            <div className="space-y-6">
+
+                {/* ── Header ──────────────────────────────────────────── */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FaShieldAlt className="text-3xl text-blue-600" />
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">System Activity Log</h1>
+                            <p className="text-sm text-gray-500">Read-only audit trail · Owner access only</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm transition"
+                    >
+                        <FaSyncAlt className={refreshing ? 'animate-spin text-blue-500' : ''} />
+                        {refreshing ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                </div>
+
+                {/* ── Stats Row ───────────────────────────────────────── */}
+                {stats && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <StatCard label="Total Entries" value={stats.total.toLocaleString()} icon="📋" colorClass="border-blue-500" />
+                        <StatCard label="Today" value={stats.todayCount} icon="🕐" colorClass="border-green-500" />
+                        <StatCard label="Top Module" value={stats.topModule} icon="📦" colorClass="border-purple-500" />
+                    </div>
+                )}
+
+                {/* ── Filter Bar ──────────────────────────────────────── */}
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <FaFilter className="text-blue-500" />
+                        <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Filter Logs</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">User</label>
+                            <select
+                                value={filters.username}
+                                onChange={e => setFilters(f => ({ ...f, username: e.target.value }))}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            >
+                                <option value="">All Users</option>
+                                {users.map(u => (
+                                    <option key={u._id} value={u.username}>
+                                        {u.username} ({u.role})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Module</label>
+                            <select
+                                value={filters.module}
+                                onChange={e => setFilters(f => ({ ...f, module: e.target.value }))}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            >
+                                <option value="">All Modules</option>
+                                {MODULE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
+                            <select
+                                value={filters.action}
+                                onChange={e => setFilters(f => ({ ...f, action: e.target.value }))}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            >
+                                <option value="">All Actions</option>
+                                {ACTION_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                            <div className="relative">
+                                <FaCalendarAlt className="absolute left-2.5 top-2.5 text-gray-400 text-xs" />
+                                <input
+                                    type="date"
+                                    value={filters.startDate}
+                                    onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                            <input
+                                type="date"
+                                value={filters.endDate}
+                                onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-3 mt-4">
+                        <button
+                            onClick={applyFilters}
+                            className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+                        >
+                            <FaSearch /> Search
+                        </button>
+                        <button
+                            onClick={resetFilters}
+                            className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── Table ───────────────────────────────────────────── */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <p className="text-sm text-gray-600">
+                            Showing <span className="font-semibold">{logs.length}</span> of{' '}
+                            <span className="font-semibold">{total.toLocaleString()}</span> entries
+                        </p>
+                        <span className="text-xs text-gray-400 italic flex items-center gap-1">
+                            🔒 Read-only — no edits or deletes permitted
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-100 text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    {['Timestamp', 'User', 'Module', 'Action', 'Details', 'IP Address', 'Status'].map(h => (
+                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {logs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                                            No audit logs found for the selected filters.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    logs.map((logEntry) => (
+                                        <tr key={logEntry._id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 text-xs">
+                                                {fmtDate(logEntry.timestamp)}
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <span className="font-medium text-gray-800">{logEntry.username}</span>
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                    {logEntry.module}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <ActionBadge action={logEntry.action} />
+                                            </td>
+                                            <td className="px-4 py-3 max-w-xs">
+                                                <span className="text-gray-600 text-xs truncate block" title={JSON.stringify(logEntry.details)}>
+                                                    {detailsText(logEntry.details)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-xs font-mono">
+                                                {logEntry.ipAddress}
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${logEntry.statusCode < 300
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    {logEntry.statusCode}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ── Pagination ────────────────────────────────────── */}
+                    {pages > 1 && (
+                        <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+                            <p className="text-xs text-gray-500">Page {page} of {pages}</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+                                >
+                                    <FaChevronLeft /> Prev
+                                </button>
+                                {Array.from({ length: Math.min(5, pages) }, (_, i) => {
+                                    const p = Math.max(1, Math.min(page - 2, pages - 4)) + i;
+                                    return p <= pages ? (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPage(p)}
+                                            className={`w-8 h-8 text-xs rounded-lg border transition ${p === page
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                                                }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ) : null;
+                                })}
+                                <button
+                                    onClick={() => setPage(p => Math.min(pages, p + 1))}
+                                    disabled={page === pages}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+                                >
+                                    Next <FaChevronRight />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Layout>
+    );
+}

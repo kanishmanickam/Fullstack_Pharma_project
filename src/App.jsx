@@ -15,6 +15,7 @@ import MedicineInventory from './pages/MedicineInventory';
 import SupplierManagement from './pages/reorder/SupplierManagement';
 import ReorderReview from './pages/reorder/ReorderReview';
 import UserManagement from './pages/admin/UserManagement';
+import ActivityLog from './pages/ActivityLog';
 
 function App() {
   return (
@@ -131,6 +132,14 @@ function App() {
             }
           />
 
+          <Route
+            path="/activity-log"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <ActivityLog />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

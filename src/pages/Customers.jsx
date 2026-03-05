@@ -105,9 +105,9 @@ const Customers = () => {
                   <tr key={customer.id || customer._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 font-semibold text-gray-900">{customer.name}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${customer.type === 'regular' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${customer.customerType === 'regular' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
                         }`}>
-                        {customer.type}
+                        {customer.customerType ? customer.customerType.charAt(0).toUpperCase() + customer.customerType.slice(1) : 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">{customer.phone}</td>

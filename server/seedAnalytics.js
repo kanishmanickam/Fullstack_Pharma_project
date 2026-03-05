@@ -56,10 +56,7 @@ const seedAnalytics = async () => {
         await InventoryHistory.deleteMany({ reason: 'analytics-seed' });
         console.log('✓ Cleared previous analytics seed data');
 
-        // ── Use a walk-in customer as default ─────────────────────────
-        const defaultCustomer = customers[0] || null;
-
-        // ── Generate 30 days of bills ─────────────────────────────────
+        // ── Seed variables ────────────────────────────────────────────
         const bills = [];
         const historyRecords = [];
 
@@ -94,11 +91,14 @@ const seedAnalytics = async () => {
                 const tax = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
                 const grandTotal = Math.round((subtotal + tax) * 100) / 100;
 
+                // Pick a random customer for this transaction
+                const customer = customers[rand(0, customers.length - 1)];
+
                 const bill = {
                     billNumber: nextBill(),
-                    customerId: defaultCustomer?._id || null,
-                    customerName: defaultCustomer?.name || 'Walk-in Customer',
-                    customerType: 'walking',
+                    customerId: customer?._id || null,
+                    customerName: customer?.name || 'Walk-in Customer',
+                    customerType: customer?.customerType || 'walking',
                     items,
                     subtotal: Math.round(subtotal * 100) / 100,
                     tax,
@@ -134,6 +134,27 @@ const seedAnalytics = async () => {
 
         await InventoryHistory.insertMany(historyRecords, { ordered: false });
         console.log(`✓ Seeded ${historyRecords.length} inventory history (sale) records`);
+
+        // ── Sync Customer Totals ──────────────────────────────────────
+        // To ensure the DB is perfectly coherent, update each customer's
+        // totalPurchases and totalSpent with what we just generated.
+        const customerUpdates = customers.map((c) => {
+            const customerBills = bills.filter((b) => String(b.customerId) === String(c._id));
+            const totalPurchases = customerBills.length;
+            const totalSpent = Math.round(customerBills.reduce((sum, b) => sum + b.grandTotal, 0) * 100) / 100;
+
+            return {
+                updateOne: {
+                    filter: { _id: c._id },
+                    update: { $set: { totalPurchases, totalSpent } }
+                }
+            };
+        });
+
+        if (customerUpdates.length > 0) {
+            await Customer.bulkWrite(customerUpdates);
+            console.log(`✓ Synced totalPurchases and totalSpent for ${customerUpdates.length} customers`);
+        }
 
         // ── Summary ───────────────────────────────────────────────────
         const totalRevenue = bills.reduce((s, b) => s + b.grandTotal, 0);

@@ -12,6 +12,8 @@ import StockIntelligence from './pages/StockIntelligence';
 import ExcelUpload from './pages/ExcelUpload';
 import FinancialReports from './pages/FinancialReports';
 import MedicineInventory from './pages/MedicineInventory';
+import SupplierManagement from './pages/reorder/SupplierManagement';
+import ReorderReview from './pages/reorder/ReorderReview';
 
 function App() {
   return (
@@ -100,6 +102,25 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/suppliers"
+            element={
+              <ProtectedRoute allowedRoles={['owner', 'staff']}>
+                <SupplierManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reorder-review"
+            element={
+              <ProtectedRoute allowedRoles={['owner', 'staff']}>
+                <ReorderReview />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

@@ -1,34 +1,34 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
-import { Supplier } from '../models/index.js';
-import log from '../utils/logger.js';
+import {
+  createSupplier,
+  getAllSuppliers,
+  updateSupplier,
+  generateReorderSuggestions,
+  getReorderSuggestions,
+  createPurchaseOrder,
+  getAllPurchaseOrders,
+  updatePurchaseOrderStatus,
+} from '../controllers/supplierController.js';
 
 const router = express.Router();
 
-// GET all suppliers
-router.get('/', protect, async (req, res) => {
-    try {
-        const suppliers = await Supplier.find().sort({ name: 1 });
-        res.status(200).json({ success: true, count: suppliers.length, suppliers });
-    } catch (error) {
-        log('ERROR', 'Get suppliers error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Error fetching suppliers', error: error.message });
-    }
-});
+// Supplier routes (Owner/Staff only)
+router.post('/suppliers', protect, authorize('owner', 'staff'), createSupplier);
+router.get('/suppliers', protect, authorize('owner', 'staff'), getAllSuppliers);
+router.put('/suppliers/:id', protect, authorize('owner', 'staff'), updateSupplier);
 
-// POST create supplier
-router.post('/', protect, authorize('owner', 'staff'), async (req, res) => {
-    try {
-        const { name, contact } = req.body;
-        if (!name || !contact) {
-            return res.status(400).json({ success: false, message: 'Name and contact are required' });
-        }
-        const supplier = await Supplier.create({ name, contact });
-        res.status(201).json({ success: true, message: 'Supplier created', supplier });
-    } catch (error) {
-        log('ERROR', 'Create supplier error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Error creating supplier', error: error.message });
-    }
-});
+// Reorder suggestion routes
+router.post('/reorder/generate', protect, authorize('owner', 'staff'), generateReorderSuggestions);
+router.get('/reorder/suggestions', protect, authorize('owner', 'staff'), getReorderSuggestions);
+
+// Purchase order routes
+router.post('/purchase-orders', protect, authorize('owner', 'staff'), createPurchaseOrder);
+router.get('/purchase-orders', protect, authorize('owner', 'staff'), getAllPurchaseOrders);
+router.put('/purchase-orders/:id', protect, authorize('owner', 'staff'), updatePurchaseOrderStatus);
+
+// Legacy routes for backwards compatibility
+router.get('/', protect, getAllSuppliers);
+router.post('/', protect, authorize('owner', 'staff'), createSupplier);
 
 export default router;

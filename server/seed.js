@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import { User, Medicine, Customer } from './models/index.js';
+import { Supplier } from './models/supplierModels.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ const seedDatabase = async () => {
     await User.deleteMany({});
     await Medicine.deleteMany({});
     await Customer.deleteMany({});
+    await Supplier.deleteMany({});
 
     // Seed users
     const userData = [
@@ -30,10 +32,10 @@ const seedDatabase = async () => {
         role: 'staff',
       },
       {
-        username: 'customer',
-        email: 'customer@medistock.com',
-        password: 'customer123',
-        role: 'customer',
+        username: 'pharmacist',
+        email: 'pharmacist@medistock.com',
+        password: 'pharmacist123',
+        role: 'staff',
       },
     ];
 
@@ -256,6 +258,92 @@ const seedDatabase = async () => {
 
     console.log('✓ Customers seeded');
 
+    // Seed suppliers
+    const suppliers = await Supplier.insertMany([
+      {
+        supplier_name: 'MedSupply India',
+        contact_info: {
+          phone: '+919876543210',
+          email: 'contact@medsupply.com',
+          address: '123 Medical Street, Anna Nagar',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          pincode: '600040',
+        },
+        delivery_performance_score: 8.5,
+        total_orders: 45,
+        successful_deliveries: 42,
+        medicine_categories: ['Tablet', 'Syrup', 'Capsule'],
+        notes: 'Reliable supplier with fast delivery',
+      },
+      {
+        supplier_name: 'PharmaHub Distributors',
+        contact_info: {
+          phone: '+919988776655',
+          email: 'sales@pharmahub.in',
+          address: '456 Healthcare Avenue, T Nagar',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          pincode: '600017',
+        },
+        delivery_performance_score: 7.2,
+        total_orders: 32,
+        successful_deliveries: 28,
+        medicine_categories: ['Injection', 'Ointment', 'Drops'],
+        notes: 'Specializes in injectable medicines',
+      },
+      {
+        supplier_name: 'HealthCare Solutions',
+        contact_info: {
+          phone: '+918765432109',
+          email: 'info@healthcaresol.com',
+          address: '789 Wellness Road, Velachery',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          pincode: '600042',
+        },
+        delivery_performance_score: 9.1,
+        total_orders: 67,
+        successful_deliveries: 65,
+        medicine_categories: ['Tablet', 'Syrup', 'Capsule', 'Ointment'],
+        notes: 'Premium quality medicines, excellent track record',
+      },
+      {
+        supplier_name: 'Apollo MedSource',
+        contact_info: {
+          phone: '+917654321098',
+          email: 'orders@apollomedsource.com',
+          address: '321 Medical Plaza, Adyar',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          pincode: '600020',
+        },
+        delivery_performance_score: 8.8,
+        total_orders: 54,
+        successful_deliveries: 52,
+        medicine_categories: ['Tablet', 'Injection', 'Drops'],
+        notes: 'Wide range of medicines, competitive pricing',
+      },
+      {
+        supplier_name: 'MediCare Wholesale',
+        contact_info: {
+          phone: '+916543210987',
+          email: 'support@medicarewholesale.in',
+          address: '555 Supply Chain Street, Porur',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          pincode: '600116',
+        },
+        delivery_performance_score: 6.5,
+        total_orders: 28,
+        successful_deliveries: 22,
+        medicine_categories: ['Syrup', 'Capsule', 'Other'],
+        notes: 'Budget-friendly options, occasional delays',
+      },
+    ]);
+
+    console.log('✓ Suppliers seeded');
+
     console.log(`
       ╔════════════════════════════════════════╗
       ║    Database Seeding Completed!         ║
@@ -263,6 +351,7 @@ const seedDatabase = async () => {
       ║ Users: ${users.length}                            ║
       ║ Medicines: ${medicines.length}                      ║
       ║ Customers: ${customers.length}                       ║
+      ║ Suppliers: ${suppliers.length}                       ║
       ╠════════════════════════════════════════╣
       ║ Test Credentials:                      ║
       ║ Owner: admin / admin123                ║

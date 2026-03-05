@@ -464,21 +464,22 @@ const prescriptionSchema = new mongoose.Schema(
 );
 
 // ============ SUPPLIER SCHEMA ============
-const supplierSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    contact: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-  },
-  { timestamps: true }
-);
+// Old simple supplier schema - replaced by supplierModels.js
+// const supplierSchema = new mongoose.Schema(
+//   {
+//     name: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+//     contact: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+//   },
+//   { timestamps: true }
+// );
 
 const Prescription = mongoose.model('Prescription', prescriptionSchema);
 
@@ -568,7 +569,8 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Supplier = mongoose.model('Supplier', supplierSchema);
+// Supplier model moved to supplierModels.js for Module 5
+// const Supplier = mongoose.model('Supplier', supplierSchema);
 
 const Order = mongoose.model('Order', orderSchema);
 
@@ -584,5 +586,5 @@ export {
   Notification,
   Prescription,
   Order,
-  Supplier,
+  // Supplier moved to supplierModels.js
 };

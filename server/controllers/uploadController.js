@@ -159,3 +159,52 @@ export const getUploadLog = async (req, res) => {
     });
   }
 };
+
+// Export inventory to Excel
+export const exportExcel = async (req, res) => {
+  try {
+    const medicines = await Medicine.find().lean();
+
+    const rows = medicines.map(m => ({
+      name: m.name,
+      category: m.category,
+      batchNumber: m.batchNumber,
+      expiryDate: m.expiryDate,
+      quantity: m.quantity,
+      purchasePrice: m.purchasePrice,
+      sellingPrice: m.sellingPrice,
+      rackNumber: m.rackNumber,
+      reorderLevel: m.reorderLevel,
+      supplier: m.supplier,
+      stockStatus: m.stockStatus,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-fit column widths
+    const colWidths = Object.keys(rows[0] || {}).map(key => ({
+      wch: Math.max(key.length, ...rows.map(r => String(r[key] ?? '').length)) + 2,
+    }));
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    const filename = `inventory_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+
+    log('INFO', 'Inventory exported to Excel', { rows: rows.length });
+  } catch (error) {
+    log('ERROR', 'Export Excel error', { error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting inventory',
+      error: error.message,
+    });
+  }
+};
+

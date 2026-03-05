@@ -1,9 +1,14 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -19,7 +24,7 @@ const storage = multer.diskStorage({
 // File filter for Excel files
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.mimetype === 'application/vnd.ms-excel') {
+    file.mimetype === 'application/vnd.ms-excel') {
     cb(null, true);
   } else {
     cb(new Error('Only Excel files are allowed'), false);

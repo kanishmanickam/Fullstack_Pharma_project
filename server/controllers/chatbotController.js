@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { Medicine, Bill, Alert } from '../models/index.js';
+import { isNearExpiry, isExpired } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -7,46 +9,88 @@ const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 /**
- * Build the system prompt based on language.
+ * Fetch a live snapshot of the inventory and format it as a readable context block.
  */
-const buildSystemPrompt = (language) => {
-  if (language === 'ta') {
-    return `நீ MediStock AI எனும் மருந்தகத் தொழிலாளி. உன்னுடைய பணி மருந்துக்கடை சரக்கு முறைமைப் பற்றிய கேள்விகளுக்கு உதவ வேண்டும்.
-    முக்கிய நிய்ம: - சரக்கு, விலை, சாய் நாள்கள், ரேக் இடங்கள் பற்றி மட்டும் பதில் சொல்.
-    - மருத்துவ ஆலோசனை கொடுக்க வேண்டாம், மருந்தகம் சரக்கு தகவல் மட்டுமே.`;
-  }
-  return `You are MediStock AI, a pharmacy inventory assistant. Your role is to help with questions about pharmacy stock management.
-  Key Rules:
-  - Only provide information about stock, prices, expiry dates, and rack locations
-  - Do NOT provide medical advice, only pharmacy inventory information
-  - Be concise and helpful
-  - If asked about something outside your scope, politely redirect to inventory topics`;
+const buildInventoryContext = async () => {
+  const medicines = await Medicine.find().lean();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayBills = await Bill.find({ createdAt: { $gte: today } }).lean();
+  const todaySales = todayBills.reduce((s, b) => s + b.grandTotal, 0);
+
+  const lowStock = medicines.filter(m => m.quantity <= m.reorderLevel);
+  const nearExpiry = medicines.filter(m => isNearExpiry(m.expiryDate, 30));
+  const expired = medicines.filter(m => isExpired(m.expiryDate));
+
+  const medicineList = medicines.map(m =>
+    `• ${m.name} | Category: ${m.category} | Batch: ${m.batchNumber} | ` +
+    `Expiry: ${m.expiryDate} | Qty: ${m.quantity} | ` +
+    `Purchase: ₹${m.purchasePrice} | Selling: ₹${m.sellingPrice} | ` +
+    `Rack: ${m.rackNumber} | Reorder Level: ${m.reorderLevel} | Supplier: ${m.supplier}`
+  ).join('\n');
+
+  return `
+=== LIVE PHARMACY INVENTORY DATA (as of ${new Date().toLocaleString('en-IN')}) ===
+
+SUMMARY:
+- Total medicines: ${medicines.length}
+- Low stock (at or below reorder level): ${lowStock.length} → ${lowStock.map(m => m.name).join(', ') || 'None'}
+- Near expiry (within 30 days): ${nearExpiry.length} → ${nearExpiry.map(m => `${m.name} (${m.expiryDate})`).join(', ') || 'None'}
+- Expired medicines: ${expired.length} → ${expired.map(m => m.name).join(', ') || 'None'}
+- Today's sales: ₹${todaySales.toFixed(2)} across ${todayBills.length} bill(s)
+
+FULL MEDICINE LIST:
+${medicineList || 'No medicines in inventory.'}
+===
+`;
 };
 
 /**
- * Call Gemini API proxy on the backend.
+ * Build the system prompt with live inventory injected.
  */
-const callGeminiAPI = async (message, language) => {
+const buildPrompt = (inventoryContext, userMessage, language) => {
+  const langInstruction = language === 'ta'
+    ? 'Respond in Tamil language.'
+    : 'Respond in English.';
+
+  return `You are MediStock AI, an intelligent pharmacy inventory assistant with access to LIVE inventory data.
+
+Your capabilities:
+- Answer specific questions about stock levels, prices, expiry dates, rack locations, suppliers
+- Identify low stock and near-expiry medicines
+- Calculate totals, compare prices, check availability
+- Provide reorder recommendations
+- Report today's sales summary
+
+Rules:
+- Only discuss pharmacy inventory topics
+- Do NOT provide medical advice (dosage, treatment, diagnosis)
+- Be concise and accurate — use the real data provided below
+- If a medicine is not found in the list, say so clearly
+- ${langInstruction}
+
+${inventoryContext}
+
+User question: ${userMessage}`;
+};
+
+/**
+ * Call Gemini API with the full context prompt.
+ */
+const callGeminiAPI = async (prompt) => {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured on the server');
   }
 
-  const systemPrompt = buildSystemPrompt(language);
-  const promptText = `${systemPrompt}\n\nUser query: ${message}\n\nRespond in ${language === 'ta' ? 'Tamil' : 'English'}:`;
-
   const { data } = await axios.post(
     `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
     {
-      contents: [
-        {
-          parts: [{ text: promptText }],
-        },
-      ],
+      contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.4,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 200,
+        maxOutputTokens: 512,
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -55,48 +99,44 @@ const callGeminiAPI = async (message, language) => {
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
       ],
     },
-    {
-      headers: { 'Content-Type': 'application/json' },
-    }
+    { headers: { 'Content-Type': 'application/json' } }
   );
 
-  if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  return null;
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 };
 
 /**
- * Simple keyword-based fallback response.
+ * Simple keyword fallback if Gemini is unavailable.
  */
-const keywordFallback = (message, language) => {
+const keywordFallback = (message, medicines, language) => {
   const lower = message.toLowerCase();
+  const ta = language === 'ta';
 
-  if (lower.includes('stock') || lower.includes('inventory')) {
-    return language === 'ta'
-      ? 'பங்குவளம் பற்றிய தகவல் பெற /inventory பக்கத்திற்கு செல்லவும்'
-      : 'For stock information, please visit the inventory page.';
-  }
-  if (lower.includes('medicine') || lower.includes('drug')) {
-    return language === 'ta'
-      ? 'மருந்து தகவல்: தயவுசெய்து பெயர் அல்லது வகை மூலம் தேடுக'
-      : 'Medicine Info: Please search by name or category.';
-  }
-  if (lower.includes('price')) {
-    return language === 'ta'
-      ? 'விலை தகவல் மருந்தின் விவரங்களில் உள்ளது. மருந்தை தேடி பார்க்கவும்'
-      : 'Pricing details are available in the medicine details. Please search for the medicine.';
-  }
-  if (lower.includes('order')) {
-    return language === 'ta'
-      ? 'புதிய விற்பனை செய்ய, பிற்பகல் பக்கத்திற்கு செல்லவும்'
-      : 'To create a new order, please visit the billing page.';
+  if (lower.includes('low stock') || lower.includes('reorder')) {
+    const low = medicines.filter(m => m.quantity <= m.reorderLevel);
+    if (!low.length) return ta ? 'அனைத்து மருந்துகளும் போதுமான அளவில் உள்ளன.' : 'All medicines are adequately stocked.';
+    return (ta ? 'குறைந்த இருப்பு மருந்துகள்:\n' : 'Low stock medicines:\n') +
+      low.map(m => `• ${m.name}: ${m.quantity} units (reorder: ${m.reorderLevel})`).join('\n');
   }
 
-  return language === 'ta'
-    ? 'மன்னிக்கவும், நான் இந்த கேள்விக்கு பதிலளிக்க முடியவில்லை. சரக்கு அல்லது மருந்து பற்றி கேளுங்கள்'
-    : 'Sorry, I can only help with inventory and medicine queries. Please ask about stock or medicines.';
+  if (lower.includes('expir')) {
+    const near = medicines.filter(m => isNearExpiry(m.expiryDate, 30));
+    if (!near.length) return ta ? 'அடுத்த 30 நாட்களில் காலாவதியாகும் மருந்துகள் இல்லை.' : 'No medicines expiring in the next 30 days.';
+    return (ta ? 'விரைவில் காலாவதியாகும் மருந்துகள்:\n' : 'Medicines expiring soon:\n') +
+      near.map(m => `• ${m.name}: ${m.expiryDate}`).join('\n');
+  }
+
+  // Search by name
+  const found = medicines.filter(m => lower.includes(m.name.toLowerCase().split(' ')[0]));
+  if (found.length) {
+    return found.map(m =>
+      `${m.name}\n  Stock: ${m.quantity} | Price: ₹${m.sellingPrice} | Rack: ${m.rackNumber} | Expiry: ${m.expiryDate}`
+    ).join('\n\n');
+  }
+
+  return ta
+    ? 'மன்னிக்கவும், சரக்கு அல்லது மருந்து பற்றிய கேள்விகளுக்கு மட்டுமே பதிலளிக்க முடியும்.'
+    : 'I can help with inventory queries — try asking about stock levels, prices, expiry dates, or a specific medicine name.';
 };
 
 // Chatbot query handler
@@ -105,38 +145,33 @@ export const chatbotQuery = async (req, res) => {
     const { message, language = 'en' } = req.body;
 
     if (!message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message is required',
-      });
+      return res.status(400).json({ success: false, message: 'Message is required' });
     }
 
-    let response;
+    // Always fetch live inventory
+    const medicines = await Medicine.find().lean();
+    let response = null;
     let source = 'gemini';
 
     try {
-      response = await callGeminiAPI(message, language);
+      const inventoryContext = await buildInventoryContext();
+      const prompt = buildPrompt(inventoryContext, message, language);
+      response = await callGeminiAPI(prompt);
     } catch (geminiError) {
-      log('WARN', 'Gemini API failed, using keyword fallback', {
-        error: geminiError.message,
-      });
+      log('WARN', 'Gemini API failed, using keyword fallback', { error: geminiError.message });
     }
 
     if (!response) {
-      response = keywordFallback(message, language);
+      response = keywordFallback(message, medicines, language);
       source = 'fallback';
     }
 
-    const disclaimer = '⚠️ This is an AI assistant. Not for medical advice.';
-
-    log('INFO', `Chatbot query processed via ${source}`, {
-      message: message.substring(0, 50),
-    });
+    log('INFO', `Chatbot query processed via ${source}`, { message: message.substring(0, 50) });
 
     res.status(200).json({
       success: true,
       response,
-      disclaimer,
+      disclaimer: '⚠️ This is an AI assistant. Not for medical advice.',
       language,
       source,
     });

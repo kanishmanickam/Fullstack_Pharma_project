@@ -5,6 +5,7 @@ import {
   uploadExcel,
   getUploadHistory,
   getUploadLog,
+  exportExcel,
 } from '../controllers/uploadController.js';
 
 const router = express.Router();
@@ -12,6 +13,7 @@ const router = express.Router();
 // All routes require authentication
 router.post('/', protect, authorize('owner', 'staff'), upload.single('file'), uploadExcel);
 router.get('/', protect, getUploadHistory);
+router.get('/export', protect, exportExcel);
 router.get('/:id', protect, getUploadLog);
 
 export default router;

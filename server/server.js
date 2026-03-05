@@ -17,7 +17,6 @@ import chatbotRoutes from './routes/chatbotRoutes.js';
 import prescriptionRoutes from './routes/prescriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
-import medicineInvRoutes from './routes/medicineInvRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -75,7 +74,6 @@ app.use('/api/orders', orderRoutes);
 app.use('/uploads', express.static('uploads'));
 
 app.use('/api/suppliers', supplierRoutes);
-app.use('/api/medicine-inv', medicineInvRoutes);
 
 // Root route
 app.get('/', (req, res) => {

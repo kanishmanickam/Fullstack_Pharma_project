@@ -570,58 +570,7 @@ const orderSchema = new mongoose.Schema(
 
 const Supplier = mongoose.model('Supplier', supplierSchema);
 
-// ============ MEDICINE INVENTORY SCHEMA ============
-const medicineInventorySchema = new mongoose.Schema(
-  {
-    medicineId: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    category: {
-      type: String,
-      required: true,
-      enum: [
-        'Tablet',
-        'Capsule',
-        'Syrup',
-        'Injection',
-        'Ointment',
-        'Drops',
-        'Inhaler',
-        'Supplement',
-      ],
-    },
-    unitPrice: {
-      type: Number,
-      required: true,
-    },
-    stockQuantity: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-    expiryDate: {
-      type: Date,
-      required: true,
-    },
-    supplierId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Supplier',
-      required: true,
-    },
-  },
-  { timestamps: true }
-);
-
 const Order = mongoose.model('Order', orderSchema);
-const MedicineInventory = mongoose.model('MedicineInventory', medicineInventorySchema);
 
 export {
   User,
@@ -636,5 +585,4 @@ export {
   Prescription,
   Order,
   Supplier,
-  MedicineInventory,
 };

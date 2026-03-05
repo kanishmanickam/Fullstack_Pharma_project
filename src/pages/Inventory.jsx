@@ -14,7 +14,7 @@ const Inventory = () => {
     const fetchMedicines = async () => {
       try {
         const res = await axiosInstance.get('/inventory');
-        setMedicines(res.data.data || []);
+        setMedicines(res.data.medicines || []);
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
       } finally {
@@ -97,8 +97,8 @@ const Inventory = () => {
                     <td className="px-6 py-4 text-sm text-gray-600 font-mono">{medicine.batchNumber}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                          expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                        expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
                         }`}>
                         {medicine.expiryDate} ({expiryStatus.days}d)
                       </span>
@@ -107,8 +107,8 @@ const Inventory = () => {
                     <td className="px-6 py-4 text-sm font-mono font-semibold">{medicine.rackNumber}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
-                          stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                        stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
                         }`}>
                         {stockStatus.label}
                       </span>

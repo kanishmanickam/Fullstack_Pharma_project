@@ -56,8 +56,10 @@ const emptyForm = {
     medicineId: '',
     name: '',
     category: '',
+    purchasePrice: '',
     unitPrice: '',
     stockQuantity: '',
+    rackNumber: '',
     expiryDate: null,
     supplierId: '',
 };
@@ -84,13 +86,15 @@ const MedicineInventory = () => {
     function convertRecordToRow(m) {
         return {
             _id: String(m._id),
-            medicineId: m.medicineId || m.batchNumber || m._id,
+            medicineId: m.batchNumber || m.medicineId || String(m._id),
             name: m.name,
             category: m.category,
-            unitPrice: m.unitPrice !== undefined ? m.unitPrice : m.price,
-            stockQuantity: m.stockQuantity !== undefined ? m.stockQuantity : m.quantity,
+            purchasePrice: m.purchasePrice,
+            unitPrice: m.sellingPrice || m.unitPrice,
+            stockQuantity: m.quantity || m.stockQuantity || 0,
+            rackNumber: m.rackNumber,
             expiryDate: m.expiryDate,
-            supplierId: m.supplierId || null,
+            supplierId: m.supplier || null,
         };
     }
 
@@ -98,7 +102,7 @@ const MedicineInventory = () => {
     const fetchMedicines = useCallback(async function fetchMedicinesImpl() {
         try {
             setLoading(true);
-            const res = await axiosInstance.get('/medicine-inv');
+            const res = await axiosInstance.get('/inventory');
             const data = Array.isArray(res.data.medicines) ? res.data.medicines : [];
             const rows = data.map(convertRecordToRow);
             setAllMedicines(rows);
@@ -154,7 +158,7 @@ const MedicineInventory = () => {
 
         try {
             setLoading(true);
-            const res = await axiosInstance.get('/medicine-inv/search', { params: { query: searchQuery } });
+            const res = await axiosInstance.get('/inventory/search', { params: { query: searchQuery } });
             const data = Array.isArray(res.data.medicines) ? res.data.medicines : [];
             const rows = data.map(convertRecordToRow);
 
@@ -179,10 +183,12 @@ const MedicineInventory = () => {
             medicineId: row.medicineId,
             name: row.name,
             category: row.category,
+            purchasePrice: row.purchasePrice,
             unitPrice: row.unitPrice,
             stockQuantity: row.stockQuantity,
+            rackNumber: row.rackNumber,
             expiryDate: dayjs(row.expiryDate),
-            supplierId: row.supplierObjId || '',
+            supplierId: row.supplierId || '',
         });
         setSelectedRow(row);
         setIsEditMode(true);
@@ -190,7 +196,7 @@ const MedicineInventory = () => {
 
     // ── dialog open helpers ────────────────────────────────
     function openInsertDialog() {
-        if (!form.medicineId || !form.name || !form.category || !form.unitPrice || !form.stockQuantity || !form.expiryDate || !form.supplierId) {
+        if (!form.medicineId || !form.name || !form.category || !form.purchasePrice || !form.unitPrice || !form.stockQuantity || !form.rackNumber || !form.expiryDate || !form.supplierId) {
             showSnackbar('Please fill all fields', 'warning');
             return;
         }
@@ -234,25 +240,27 @@ const MedicineInventory = () => {
         setDialog({ ...dialog, open: false });
 
         const standardized = {
-            medicineId: form.medicineId,
+            batchNumber: form.medicineId,
             name: form.name,
             category: form.category,
-            unitPrice: Number(form.unitPrice),
-            stockQuantity: Number(form.stockQuantity),
+            purchasePrice: Number(form.purchasePrice),
+            sellingPrice: Number(form.unitPrice),
+            quantity: Number(form.stockQuantity),
+            rackNumber: form.rackNumber,
             expiryDate: form.expiryDate ? dayjs(form.expiryDate).toISOString() : null,
-            supplierId: form.supplierId,
+            supplier: form.supplierId,
         };
 
         try {
             setLoading(true);
             if (type === 'insert') {
-                await axiosInstance.post('/medicine-inv', standardized);
+                await axiosInstance.post('/inventory', standardized);
                 showSnackbar('Medicine added successfully');
             } else if (type === 'update') {
-                await axiosInstance.put(`/medicine-inv/${selectedRow.medicineId}`, standardized);
+                await axiosInstance.put(`/inventory/${selectedRow._id}`, standardized);
                 showSnackbar('Medicine updated successfully');
             } else if (type === 'delete') {
-                await axiosInstance.delete(`/medicine-inv/${selectedRow.medicineId}`);
+                await axiosInstance.delete(`/inventory/${selectedRow._id}`);
                 showSnackbar('Medicine deleted successfully');
             }
             fetchMedicines();
@@ -316,21 +324,18 @@ const MedicineInventory = () => {
     ];
 
     const rows = medicines.map((m) => {
-        // Handle supplier data - could be object (populated) or string (ID only)
-        const supplierObj = typeof m.supplierId === 'object' && m.supplierId ? m.supplierId : null;
-        const supplierName = supplierObj?.name || 'N/A';
-        const supplierId = supplierObj?._id || m.supplierId || '';
-        
         return {
             id: m._id,
             medicineId: m.medicineId,
             name: m.name,
             category: m.category,
+            purchasePrice: m.purchasePrice,
             unitPrice: m.unitPrice,
             stockQuantity: m.stockQuantity,
+            rackNumber: m.rackNumber,
             expiryDate: m.expiryDate,
-            supplierName: supplierName,
-            supplierObjId: supplierId,
+            supplierName: m.supplierId,
+            supplierId: m.supplierId,
             _id: m._id
         };
     });
@@ -436,22 +441,21 @@ const MedicineInventory = () => {
                         <Divider sx={{ mb: 2.5 }} />
 
                         <Grid container spacing={2.5}>
-                            {/* 1 — Medicine ID */}
-                            <Grid item xs={12} sm={6} md={4}>
+                            {/* 1 — Medicine ID (Batch Num) */}
+                            <Grid item xs={12} sm={6} md={3}>
                                 <TextField
-                                    label="Medicine ID"
+                                    label="Batch No. (ID)"
                                     fullWidth
                                     size="small"
                                     required
                                     value={form.medicineId}
                                     onChange={handleChange('medicineId')}
                                     disabled={isEditMode}
-                                    helperText={isEditMode ? 'Primary key — cannot edit' : ''}
                                 />
                             </Grid>
 
                             {/* 2 — Medicine Name */}
-                            <Grid item xs={12} sm={6} md={4}>
+                            <Grid item xs={12} sm={6} md={3}>
                                 <TextField
                                     label="Medicine Name"
                                     fullWidth
@@ -463,7 +467,7 @@ const MedicineInventory = () => {
                             </Grid>
 
                             {/* 3 — Category */}
-                            <Grid item xs={12} sm={6} md={4}>
+                            <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth size="small" required>
                                     <InputLabel>Category</InputLabel>
                                     <Select
@@ -480,10 +484,38 @@ const MedicineInventory = () => {
                                 </FormControl>
                             </Grid>
 
-                            {/* 4 — Unit Price */}
+                            {/* Rack Number */}
                             <Grid item xs={12} sm={6} md={3}>
                                 <TextField
-                                    label="Unit Price (₹)"
+                                    label="Rack Number"
+                                    fullWidth
+                                    size="small"
+                                    required
+                                    value={form.rackNumber}
+                                    onChange={handleChange('rackNumber')}
+                                />
+                            </Grid>
+
+                            {/* Purchase Price */}
+                            <Grid item xs={12} sm={6} md={3}>
+                                <TextField
+                                    label="Purchase Price (₹)"
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    required
+                                    value={form.purchasePrice}
+                                    onChange={handleChange('purchasePrice')}
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                    }}
+                                />
+                            </Grid>
+
+                            {/* Selling Price */}
+                            <Grid item xs={12} sm={6} md={3}>
+                                <TextField
+                                    label="Selling Price (₹)"
                                     fullWidth
                                     size="small"
                                     type="number"
@@ -521,7 +553,7 @@ const MedicineInventory = () => {
                                 />
                             </Grid>
 
-                            {/* 7 — Supplier ID */}
+                            {/* 7 — Supplier String */}
                             <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth size="small" required>
                                     <InputLabel>Supplier</InputLabel>
@@ -531,7 +563,7 @@ const MedicineInventory = () => {
                                         onChange={handleChange('supplierId')}
                                     >
                                         {suppliers.map((s) => (
-                                            <MenuItem key={s._id} value={s._id}>
+                                            <MenuItem key={s.name} value={s.name}>
                                                 {s.name}
                                             </MenuItem>
                                         ))}

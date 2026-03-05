@@ -70,7 +70,7 @@ const Billing = () => {
           axiosInstance.get('/inventory'),
           axiosInstance.get('/customers')
         ]);
-        setMedicines(medicinesRes.data.data || []);
+        setMedicines(medicinesRes.data.medicines || []);
         setCustomers(customersRes.data.customers || []);
       } catch (error) {
         console.error('Failed to fetch billing data:', error);
@@ -360,8 +360,8 @@ const Billing = () => {
                 <button
                   onClick={() => isListening && voiceMode === 'search' ? stopVoiceInput() : startVoiceInput('search')}
                   className={`absolute right-2 top-2 p-2 rounded-lg transition-colors ${isListening && voiceMode === 'search'
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
                     }`}
                   title={isListening && voiceMode === 'search' ? 'Stop voice input' : 'Voice search'}
                 >
@@ -453,8 +453,8 @@ const Billing = () => {
                       <button
                         onClick={() => isListening && voiceMode === 'quantity' ? stopVoiceInput() : startVoiceInput('quantity')}
                         className={`absolute right-2 top-2 p-1.5 rounded transition-colors ${isListening && voiceMode === 'quantity'
-                            ? 'bg-red-500 text-white animate-pulse'
-                            : 'bg-primary-600 text-white hover:bg-primary-700'
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                         title={isListening && voiceMode === 'quantity' ? 'Stop voice input' : 'Voice quantity'}
                       >

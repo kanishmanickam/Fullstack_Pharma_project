@@ -32,7 +32,7 @@ await connectDB();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'http://fullstack-pharma-project.vercel.app',
+  'https://fullstack-pharma-project.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
@@ -68,6 +68,16 @@ app.use('/uploads', express.static('uploads'));
 
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/medicine-inv', medicineInvRoutes);
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'MediStock Backend Server is running',
+    version: '1.0.0',
+    health: '/api/health',
+  });
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

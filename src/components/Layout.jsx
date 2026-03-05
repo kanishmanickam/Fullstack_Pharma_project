@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { useState } from 'react';
 import Chatbot from './Chatbot';
+import logo from '../assets/logo.png';
 
 const Layout = ({ children }) => {
   const { currentUser, logout } = useAuth();
@@ -40,10 +41,13 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-lg fixed h-full overflow-y-auto">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            MediStock <span className="text-primary-600">AI</span>
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">Smart Inventory. Safer Care.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <img src={logo} alt="MediStock Logo" className="h-9 w-auto" />
+            <h1 className="text-xl font-bold text-gray-900">
+              MediStock <span className="text-primary-600">AI</span>
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500">Smart Inventory. Safer Care.</p>
         </div>
 
         <nav className="px-4">

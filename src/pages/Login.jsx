@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaUser, FaLock, FaUserMd, FaUserTie, FaShoppingCart } from 'react-icons/fa';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -29,6 +30,7 @@ const Login = () => {
         {/* Left Side - Branding */}
         <div className="flex flex-col justify-center">
           <div className="mb-8">
+            <img src={logo} alt="MediStock Logo" className="h-20 w-auto mb-4" />
             <h1 className="text-5xl font-bold text-gray-900 mb-3">
               MediStock <span className="text-primary-600">AI</span>
             </h1>

@@ -109,18 +109,20 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  log('INFO', `Server running on port ${PORT}`);
-  console.log(`
-    ╔═══════════════════════════════════════════════════╗
-    ║   MediStock Backend Server Started Successfully   ║
-    ╠═══════════════════════════════════════════════════╣
-    ║ API Server:  http://localhost:${PORT}                  ║
-    ║ Health:      http://localhost:${PORT}/api/health       ║
-    ║ Environment: ${process.env.NODE_ENV || 'development'}       ║
-    ║ Database:    ${process.env.MONGODB_URI || 'Not configured'} ║
-    ╚═══════════════════════════════════════════════════╝
-  `);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    log('INFO', `Server running on port ${PORT}`);
+    console.log(`
+      ╔═══════════════════════════════════════════════════╗
+      ║   MediStock Backend Server Started Successfully   ║
+      ╠═══════════════════════════════════════════════════╣
+      ║ API Server:  http://localhost:${PORT}                  ║
+      ║ Health:      http://localhost:${PORT}/api/health       ║
+      ║ Environment: ${process.env.NODE_ENV || 'development'}       ║
+      ║ Database:    ${process.env.MONGODB_URI || 'Not configured'} ║
+      ╚═══════════════════════════════════════════════════╝
+    `);
+  });
+}
 
 export default app;

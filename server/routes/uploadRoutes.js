@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 // All routes require authentication
-router.post('/', protect, authorize('owner', 'staff'), upload.single('file'), uploadExcel);
+router.post('/excel', protect, authorize('owner', 'staff'), upload.single('file'), uploadExcel);
 router.get('/', protect, getUploadHistory);
 router.get('/export', protect, exportExcel);
 router.get('/:id', protect, getUploadLog);

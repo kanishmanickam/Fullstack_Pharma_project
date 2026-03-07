@@ -1,8 +1,12 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
-import { User, Medicine, Customer, Bill, Category, InventoryHistory, AuditLog } from './models/index.js';
-import { Supplier, PurchaseOrder } from './models/supplierModels.js';
+import {
+    User, Medicine, Customer, Bill, Category,
+    InventoryHistory, AuditLog, Alert, Report,
+    Notification, Prescription, Order, UploadLog
+} from './models/index.js';
+import { Supplier, PurchaseOrder, ReorderSuggestion } from './models/supplierModels.js';
 
 dotenv.config();
 
@@ -24,17 +28,14 @@ const seedDatabase = async () => {
         console.log('Connected to MongoDB');
 
         // ── 0. CLEAR EXISTING DATA ──────────────────────────────────────────
-        console.log('Cleaning existing data...');
+        console.log('Cleaning existing data across all 15 collections...');
         await Promise.all([
-            User.deleteMany({}),
-            Category.deleteMany({}),
-            Medicine.deleteMany({}),
-            Customer.deleteMany({}),
-            Bill.deleteMany({}),
-            Supplier.deleteMany({}),
-            InventoryHistory.deleteMany({}),
-            AuditLog.deleteMany({}),
-            PurchaseOrder.deleteMany({})
+            User.deleteMany({}), Category.deleteMany({}), Medicine.deleteMany({}),
+            Customer.deleteMany({}), Bill.deleteMany({}), Supplier.deleteMany({}),
+            InventoryHistory.deleteMany({}), AuditLog.deleteMany({}), PurchaseOrder.deleteMany({}),
+            Alert.deleteMany({}), Notification.deleteMany({}), Report.deleteMany({}),
+            Prescription.deleteMany({}), Order.deleteMany({}), ReorderSuggestion.deleteMany({}),
+            UploadLog.deleteMany({})
         ]);
         console.log('✓ Existing data cleared');
 
@@ -90,7 +91,6 @@ const seedDatabase = async () => {
                 medicine_categories: ["Tablet", "Injection", "Drops"], is_active: true
             }
         ];
-        // map categories to object ids
         const mappedSuppliers = supplierData.map(s => ({
             ...s,
             medicine_categories: s.medicine_categories.map(c => categoryMap[c]).filter(id => id)
@@ -131,7 +131,7 @@ const seedDatabase = async () => {
 
         const mappedMedicines = medicineData.map(m => ({
             ...m,
-            category: categoryMap[m.category] || null, // store reference
+            category: categoryMap[m.category] || null,
             supplier: supplierMap[m.supplier] ? String(supplierMap[m.supplier]) : m.supplier
         }));
         const medicines = await Medicine.insertMany(mappedMedicines);
@@ -191,7 +191,6 @@ const seedDatabase = async () => {
         await InventoryHistory.insertMany(historyRecords, { ordered: false });
         console.log(`✓ Seeded ${bills.length} Bills and ${historyRecords.length} Inventory/Sales operations`);
 
-        // Sync Customer totals natively via DB aggregation
         for (const c of customers) {
             const customerBills = bills.filter(b => String(b.customerId) === String(c._id));
             const totalPurchases = customerBills.length;
@@ -200,7 +199,104 @@ const seedDatabase = async () => {
         }
         console.log('✓ Customers Analytics synced natively');
 
-        // ── 7. SEED AUDIT LOGS ─────────────────────────────────────────────
+        // ── 7. SEED EXCEPTIONAL ACTIVITIES (Purchase Orders, Alerts, Reorders)
+
+        // 7a. Purchase Orders
+        const purchaseOrders = [];
+        for (let i = 0; i < 3; i++) {
+            const med = medicines[i];
+            const supplierDoc = await Supplier.findById(med.supplier).catch(() => suppliers[0]); // fallback to first supplier if string match didn't resolve
+
+            purchaseOrders.push({
+                order_number: `PO-${rand(1000, 9999)}`,
+                medicine_id: med._id,
+                medicine_name: med.name,
+                supplier_id: supplierDoc._id,
+                requested_quantity: rand(100, 500),
+                unit_price: med.purchasePrice,
+                total_amount: med.purchasePrice * rand(100, 500),
+                order_status: ['Pending', 'Ordered', 'Shipped'][i],
+                expected_delivery_date: new Date(Date.now() + 86400000 * rand(3, 10)),
+                created_by: owner._id,
+                approved_by: owner._id
+            });
+        }
+        await PurchaseOrder.insertMany(purchaseOrders);
+
+        // 7b. Alerts and Reorder Suggestions
+        const alerts = [];
+        const reorderSuggestions = [];
+        const notifications = [];
+        const lowStockMeds = medicines.filter(m => m.quantity <= m.reorderLevel);
+
+        for (const med of lowStockMeds) {
+            // Document the alert
+            const alertDoc = await Alert.create({
+                medicineId: med._id, medicineName: med.name,
+                alertType: 'low_stock',
+                message: `Stock for ${med.name} is critically low (${med.quantity} remaining).`,
+                severity: med.quantity < (med.reorderLevel / 2) ? 'critical' : 'warning'
+            });
+            alerts.push(alertDoc);
+
+            // Document the notification
+            notifications.push({
+                userId: owner._id, recipientType: 'email',
+                recipient: owner.email, subject: `Low Stock Alert: ${med.name}`,
+                message: alertDoc.message, relatedAlertId: alertDoc._id,
+                status: 'sent', createdAt: daysAgoDate(1)
+            });
+
+            // Document the AI reorder logic equivalent
+            const sup = suppliers.find(s => s._id.toString() === med.supplier) || suppliers[0];
+            reorderSuggestions.push({
+                medicine_id: med._id, medicine_name: med.name,
+                current_stock: med.quantity, reorder_level: med.reorderLevel,
+                suggested_quantity: med.reorderLevel * 2,
+                ai_demand_forecast: med.reorderLevel * 2.5,
+                suggested_suppliers: [{ supplier_id: sup._id, supplier_name: sup.supplier_name, delivery_score: sup.delivery_performance_score, estimated_price: med.purchasePrice }],
+                status: 'Pending', priority: alertDoc.severity === 'critical' ? 'High' : 'Medium'
+            });
+        }
+        await ReorderSuggestion.insertMany(reorderSuggestions);
+        await Notification.insertMany(notifications);
+
+        // 7c. Sub-Collections (Orders, Prescriptions, Reports, Uploads)
+        const sampleCustomer = customers[0];
+        const prescription = await Prescription.create({
+            customerId: sampleCustomer._id, customerName: sampleCustomer.name, customerPhone: sampleCustomer.phone,
+            prescriptionFile: '/uploads/sample-prescription.pdf', fileName: 'doctors_note.pdf', fileSize: 1048576,
+            status: 'approved', reviewedBy: owner._id, reviewDate: new Date(),
+            prescribedMedicines: [{ medicineName: 'Paracetamol', dosage: '500mg', quantity: 10, instructions: 'Twice daily' }]
+        });
+
+        await Order.insertMany([
+            {
+                orderNumber: `ORD-${rand(1000, 9999)}`, customerId: sampleCustomer._id, customerName: sampleCustomer.name,
+                customerPhone: sampleCustomer.phone, orderType: 'delivery', deliveryAddress: sampleCustomer.address,
+                items: [{ medicineId: medicines[2]._id, medicineName: medicines[2].name, quantity: 2, price: medicines[2].sellingPrice, total: medicines[2].sellingPrice * 2 }],
+                prescriptionId: prescription._id, subtotal: medicines[2].sellingPrice * 2, grandTotal: (medicines[2].sellingPrice * 2) + 50, // subtotal + tax + delivery
+                paymentMethod: 'cod', paymentStatus: 'pending', orderStatus: 'placed', staffId: staffList[0]._id
+            }
+        ]);
+
+        await Report.create({
+            reportType: 'sales', period: 'monthly', date: new Date(),
+            data: { totalSales: bills.length, revenue: Math.round(bills.reduce((s, b) => s + b.grandTotal, 0) * 100) / 100 },
+            generatedBy: owner._id
+        });
+
+        await UploadLog.create({
+            fileName: 'monthly_inventory_sheet.xlsx', fileSize: 2048576,
+            recordsProcessed: 120, recordsSuccessful: 118, recordsFailed: 2,
+            anomalies: [{ row: 45, field: 'sellingPrice', issue: 'Invalid number format' }],
+            uploadedBy: owner._id, status: 'partial', createdAt: daysAgoDate(10)
+        });
+
+        console.log(`✓ Generated ${purchaseOrders.length} PurchaseOrders, ${alerts.length} Alerts, ${reorderSuggestions.length} Reorders`);
+        console.log(`✓ Generated custom user Orders, Prescriptions, Reports, and UploadLog entries`);
+
+        // ── 8. SEED AUDIT LOGS ─────────────────────────────────────────────
         const auditEntries = [];
         for (let day = 29; day >= 0; day--) {
             auditEntries.push({
@@ -239,7 +335,6 @@ const seedDatabase = async () => {
             supDayOffset = Math.max(0, supDayOffset - 3);
         }
 
-        // Random stock updates
         for (let i = 0; i < 40; i++) {
             const med = medicines[rand(0, medicines.length - 1)];
             const from = rand(20, 200);
@@ -255,21 +350,30 @@ const seedDatabase = async () => {
         console.log(`✓ Seeded ${auditEntries.length} coherent Audit Logs matching exact dataset events`);
 
         console.log(`
-      ╔═════════════════════════════════════════════════════╗
-      ║    Master Database Seeding Completed Successfully!  ║
-      ╠═════════════════════════════════════════════════════╣
-      ║ Users              : ${users.length}                            ║
-      ║ Categories         : ${categoryDocs.length}                           ║
-      ║ Suppliers          : ${suppliers.length}                            ║
-      ║ Customers          : ${customers.length}                            ║
-      ║ Medicines          : ${medicines.length}                           ║
-      ║ Bills              : ${bills.length}                          ║
-      ║ Audit Logs         : ${auditEntries.length}                          ║
-      ╠═════════════════════════════════════════════════════╣
-      ║ Test Credentials:                                   ║
-      ║ Owner: admin / admin123                             ║
-      ║ Staff: staff / staff123                             ║
-      ╚═════════════════════════════════════════════════════╝
+      ╔═════════════════════════════════════════════════════════╗
+      ║    Master Database Seeding Completed Successfully!      ║
+      ╠═════════════════════════════════════════════════════════╣
+      ║ Core Models                                             ║
+      ║ ├─ Users              : ${users.length.toString().padEnd(30)}║
+      ║ ├─ Categories         : ${categoryDocs.length.toString().padEnd(30)}║
+      ║ ├─ Suppliers          : ${suppliers.length.toString().padEnd(30)}║
+      ║ ├─ Customers          : ${customers.length.toString().padEnd(30)}║
+      ║ └─ Medicines          : ${medicines.length.toString().padEnd(30)}║
+      ║                                                         ║
+      ║ Analytics & Logs                                        ║
+      ║ ├─ Bills              : ${bills.length.toString().padEnd(30)}║
+      ║ └─ Audit Logs         : ${auditEntries.length.toString().padEnd(30)}║
+      ║                                                         ║
+      ║ Extensions                                              ║
+      ║ ├─ PurchaseOrders     : ${purchaseOrders.length.toString().padEnd(30)}║
+      ║ ├─ Alerts / Reorders  : ${alerts.length.toString().padEnd(30)}║
+      ║ ├─ Orders / Prescrips : 1 / 1                         ║
+      ║ └─ Misc (Rep/Notif)   : generated                       ║
+      ╠═════════════════════════════════════════════════════════╣
+      ║ Test Credentials:                                       ║
+      ║ Owner: admin / admin123                                 ║
+      ║ Staff: staff / staff123                                 ║
+      ╚═════════════════════════════════════════════════════════╝
         `);
 
         await mongoose.disconnect();

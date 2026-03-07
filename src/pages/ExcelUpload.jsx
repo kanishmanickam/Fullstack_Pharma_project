@@ -59,7 +59,7 @@ const ExcelUpload = () => {
     formData.append('file', selectedFile);
 
     try {
-      const res = await axiosInstance.post('/uploads', formData, {
+      const res = await axiosInstance.post('/uploads/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setUploadResult({ success: true, log: res.data.uploadLog });

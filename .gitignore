@@ -16,3 +16,4 @@ out/
 server/logs/
 server/uploads/
 server/node_modules/
+MODULE*.md

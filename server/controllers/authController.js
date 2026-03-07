@@ -2,6 +2,8 @@ import { User } from '../models/index.js';
 import { generateToken } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 import { createAuditEntry } from '../middleware/auditLogger.js';
+import speakeasy from 'speakeasy';
+import qrcode from 'qrcode';
 
 // Register new user (Owner only - for adding staff)
 export const register = async (req, res) => {
@@ -27,7 +29,7 @@ export const register = async (req, res) => {
     // Validate role
     const allowedRoles = ['owner', 'staff'];
     const userRole = role || 'staff';
-    
+
     if (!allowedRoles.includes(userRole)) {
       return res.status(400).json({
         success: false,
@@ -52,10 +54,10 @@ export const register = async (req, res) => {
       role: userRole,
     });
 
-    log('INFO', 'User registered successfully', { 
-      userId: user._id, 
+    log('INFO', 'User registered successfully', {
+      userId: user._id,
       role: user.role,
-      registeredBy: req.user?.id 
+      registeredBy: req.user?.id
     });
 
     res.status(201).json({
@@ -68,6 +70,7 @@ export const register = async (req, res) => {
         role: user.role,
         roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
         isActive: user.isActive,
+        isTwoFactorEnabled: user.isTwoFactorEnabled,
         createdAt: user.createdAt
       },
     });
@@ -118,6 +121,16 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if 2FA is enabled
+    if (user.isTwoFactorEnabled) {
+      return res.status(200).json({
+        success: true,
+        requires2FA: true,
+        message: '2FA verification required',
+        username: user.username
+      });
+    }
+
     // Generate token with complete user info
     const token = generateToken(user);
 
@@ -147,6 +160,7 @@ export const login = async (req, res) => {
         role: user.role,
         roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
         isActive: user.isActive,
+        isTwoFactorEnabled: user.isTwoFactorEnabled,
         permissions: getPermissionsByRole(user.role)
       },
     });
@@ -174,7 +188,7 @@ function getPermissionsByRole(role) {
       canUseChatbot: true
     };
   }
-  
+
   // Staff permissions
   return {
     canViewFinancials: false,
@@ -209,6 +223,7 @@ export const getCurrentUser = async (req, res) => {
         role: user.role,
         roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
         isActive: user.isActive,
+        isTwoFactorEnabled: user.isTwoFactorEnabled,
         createdAt: user.createdAt,
         permissions: getPermissionsByRole(user.role)
       },
@@ -235,6 +250,7 @@ export const getAllUsers = async (req, res) => {
       role: user.role,
       roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
       isActive: user.isActive,
+      isTwoFactorEnabled: user.isTwoFactorEnabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     }));
@@ -282,7 +298,7 @@ export const updateUser = async (req, res) => {
     if (email) updateData.email = email;
     if (role) updateData.role = role;
     if (typeof isActive === 'boolean') updateData.isActive = isActive;
-    
+
     // If password is being updated, hash it
     if (password) {
       const bcryptjs = await import('bcryptjs');
@@ -303,7 +319,7 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    log('INFO', 'User updated', { 
+    log('INFO', 'User updated', {
       updatedUserId: id,
       updatedBy: req.user.id,
       changes: Object.keys(updateData)
@@ -319,6 +335,7 @@ export const updateUser = async (req, res) => {
         role: user.role,
         roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
         isActive: user.isActive,
+        isTwoFactorEnabled: user.isTwoFactorEnabled,
         updatedAt: user.updatedAt
       },
     });
@@ -354,7 +371,7 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    log('INFO', 'User deleted', { 
+    log('INFO', 'User deleted', {
       deletedUserId: id,
       deletedBy: req.user.id,
       deletedUsername: user.username
@@ -371,5 +388,131 @@ export const deleteUser = async (req, res) => {
       message: 'Error deleting user',
       error: error.message,
     });
+  }
+};
+
+// ============ 2FA CONTROLLERS ============
+
+// Setup 2FA
+export const setup2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const secret = speakeasy.generateSecret({
+      name: `MediStock AI (${user.email})`,
+    });
+
+    // DO NOT overwrite the secret in the database yet. 
+    // We send it to frontend, and frontend will return it during verification.
+
+    const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
+
+    res.status(200).json({
+      success: true,
+      qrCodeUrl,
+      secret: secret.base32
+    });
+  } catch (error) {
+    log('ERROR', 'Setup 2FA error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Error setting up 2FA', error: error.message });
+  }
+};
+
+// Verify 2FA Setup
+export const verify2FASetup = async (req, res) => {
+  try {
+    const { token, secret } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'User not found' });
+    }
+    if (!secret) {
+      return res.status(400).json({ success: false, message: 'No 2FA secret found to verify' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: secret,
+      encoding: 'base32',
+      token,
+      window: 1 // Allow 1 step before/after (30 seconds grace period)
+    });
+
+    if (verified) {
+      user.twoFactorSecret = secret;
+      user.isTwoFactorEnabled = true;
+      await user.save();
+
+      log('INFO', '2FA enabled successfully', { userId: user._id });
+      res.status(200).json({ success: true, message: '2FA successfully enabled' });
+    } else {
+      res.status(400).json({ success: false, message: 'Invalid 2FA token' });
+    }
+  } catch (error) {
+    log('ERROR', 'Verify 2FA setup error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Error verifying 2FA setup', error: error.message });
+  }
+};
+
+// Verify 2FA Login
+export const verify2FALogin = async (req, res) => {
+  try {
+    const { username, token } = req.body;
+
+    if (!username || !token) {
+      return res.status(400).json({ success: false, message: 'Provide username and 2FA token' });
+    }
+
+    const user = await User.findOne({ username });
+    if (!user || !user.isTwoFactorEnabled) {
+      return res.status(400).json({ success: false, message: 'Invalid 2FA request' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1
+    });
+
+    if (verified) {
+      const jwtToken = generateToken(user);
+
+      createAuditEntry({
+        userId: user._id,
+        username: user.username,
+        action: 'USER_LOGIN',
+        module: 'System',
+        details: { role: user.role, type: '2FA' },
+        ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown',
+        httpMethod: 'POST',
+        endpoint: '/api/auth/login/verify-2fa',
+        statusCode: 200,
+      });
+
+      log('INFO', 'User logged in successfully with 2FA', { userId: user._id, role: user.role });
+
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        token: jwtToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          roleDisplay: user.role === 'owner' ? 'Admin' : 'Operational Staff',
+          isActive: user.isActive,
+          isTwoFactorEnabled: user.isTwoFactorEnabled,
+          permissions: getPermissionsByRole(user.role)
+        }
+      });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid 2FA token' });
+    }
+  } catch (error) {
+    log('ERROR', 'Verify 2FA login error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Error verifying 2FA login' });
   }
 };

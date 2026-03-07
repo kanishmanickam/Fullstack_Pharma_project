@@ -2,10 +2,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers, FaUsersCog,
-  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills, FaTruck, FaClipboardList, FaList
+  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills, FaTruck, FaClipboardList, FaList, FaShieldAlt
 } from 'react-icons/fa';
 import { useState } from 'react';
 import Chatbot from './Chatbot';
+import SecuritySettingsModal from './SecuritySettingsModal';
 import logo from '../assets/logo.png';
 
 const Layout = ({ children }) => {
@@ -13,6 +14,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showChatbot, setShowChatbot] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -107,6 +109,13 @@ const Layout = ({ children }) => {
             <p className="text-xs text-gray-500 capitalize">{currentUser?.role}</p>
           </div>
           <button
+            onClick={() => setShowSecurityModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-primary-50 text-primary-700 py-2 rounded-lg hover:bg-primary-100 transition-colors mb-2 font-medium shadow-sm"
+          >
+            <FaShieldAlt />
+            <span>2FA Setup</span>
+          </button>
+          <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"
           >
@@ -131,6 +140,9 @@ const Layout = ({ children }) => {
 
       {/* Chatbot Component */}
       {showChatbot && <Chatbot onClose={() => setShowChatbot(false)} />}
+
+      {/* Security Modal Component */}
+      {showSecurityModal && <SecuritySettingsModal onClose={() => setShowSecurityModal(false)} />}
     </div>
   );
 };

@@ -27,6 +27,10 @@ export const AuthProvider = ({ children }) => {
       const res = await axiosInstance.post('/auth/login', { username, password });
 
       if (res.data.success) {
+        if (res.data.requires2FA) {
+          return { success: true, requires2FA: true, username: res.data.username };
+        }
+
         const { user, token } = res.data;
         setCurrentUser(user);
         setToken(token);
@@ -38,6 +42,27 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: 'Invalid credentials' };
     } catch (error) {
       return { success: false, message: error.response?.data?.message || 'Login failed' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verify2FA = async (username, tokenStr) => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.post('/auth/login/verify-2fa', { username, token: tokenStr });
+
+      if (res.data.success) {
+        const { user, token } = res.data;
+        setCurrentUser(user);
+        setToken(token);
+        localStorage.setItem('medistock_user', JSON.stringify(user));
+        localStorage.setItem('medistock_token', token);
+        return { success: true, user: user };
+      }
+      return { success: false, message: res.data.message || 'Invalid 2FA token' };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Verification failed' };
     } finally {
       setLoading(false);
     }
@@ -62,6 +87,7 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     token,
     login,
+    verify2FA,
     logout,
     hasRole,
     loading,

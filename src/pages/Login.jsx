@@ -7,18 +7,35 @@ import logo from '../assets/logo.png';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [totpToken, setTotpToken] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, verify2FA } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
+    if (requires2FA) {
+      const result = await verify2FA(username, totpToken);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.message);
+      }
+      return;
+    }
+
     const result = await login(username, password);
 
     if (result.success) {
-      navigate('/dashboard');
+      if (result.requires2FA) {
+        setRequires2FA(true);
+        setError('');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.message);
     }
@@ -53,39 +70,71 @@ const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-            </div>
+            {!requires2FA ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter username"
+                      required
+                      disabled={requires2FA}
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter password"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter password"
+                      required
+                      disabled={requires2FA}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                  Authenticator Code (6-Digits)
+                </label>
+                <div className="relative">
+                  <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-500" />
+                  <input
+                    type="text"
+                    value={totpToken}
+                    onChange={(e) => setTotpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full pl-10 pr-4 py-4 border-2 border-primary-200 rounded-lg focus:ring-4 focus:ring-primary-100 focus:border-primary-500 text-center tracking-[0.5em] text-2xl font-mono font-bold text-gray-800 transition-all placeholder:text-gray-300 placeholder:font-normal placeholder:tracking-normal"
+                    placeholder="••••••"
+                    maxLength="6"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setRequires2FA(false); setTotpToken(''); setPassword(''); }}
+                  className="mt-4 text-sm text-gray-500 hover:text-primary-600 underline w-full text-center"
+                >
+                  Return to Login
+                </button>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -95,9 +144,9 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition-colors font-semibold text-lg"
+              className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition-colors font-semibold text-lg shadow-md hover:shadow-lg"
             >
-              Login
+              {requires2FA ? 'Verify Code' : 'Secure Login'}
             </button>
           </form>
 

@@ -18,10 +18,7 @@
     "dayjs": "^1.11.19",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-<<<<<<< HEAD
-=======
     "react-hot-toast": "^2.6.0",
->>>>>>> 91701aa (Integrated local MediStock AI updates)
     "react-icons": "^5.0.1",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0"

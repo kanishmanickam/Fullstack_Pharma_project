@@ -129,12 +129,13 @@ const Billing = () => {
       ));
     } else {
       // Add new item
+      const primaryBatch = selectedMedicine.batches && selectedMedicine.batches.length > 0 ? selectedMedicine.batches[0] : {};
       const newItem = {
         medicineId: selectedMedicine._id,
         name: selectedMedicine.name,
-        batchNo: selectedMedicine.batchNumber,
-        expiryDate: selectedMedicine.expiryDate,
-        rackNo: selectedMedicine.rackNumber,
+        batchNo: primaryBatch.batchNumber || 'N/A',
+        expiryDate: primaryBatch.expiryDate ? new Date(primaryBatch.expiryDate).toLocaleDateString() : 'N/A',
+        rackNo: primaryBatch.rackNumber || 'N/A',
         price: selectedMedicine.sellingPrice,
         quantity: quantity,
         total: selectedMedicine.sellingPrice * quantity
@@ -422,27 +423,30 @@ const Billing = () => {
                   <p className="p-4 text-gray-500 text-center">No medicines found</p>
                 ) : (
                   <div className="divide-y">
-                    {sortByFEFO(filteredMedicines).map(medicine => (
-                      <button
-                        key={medicine._id}
-                        onClick={() => {
-                          setSelectedMedicine(medicine);
-                          setSearchTerm('');
-                        }}
-                        className="w-full p-4 text-left hover:bg-primary-50 transition-colors"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-gray-800">{medicine.name}</p>
-                            <p className="text-sm text-gray-600">{medicine.category}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Batch: {medicine.batchNumber} | Rack: {medicine.rackNumber} | Stock: {medicine.quantity}
-                            </p>
+                    {sortByFEFO(filteredMedicines).map(medicine => {
+                      const batch = medicine.batches && medicine.batches.length > 0 ? medicine.batches[0] : {};
+                      return (
+                        <button
+                          key={medicine._id}
+                          onClick={() => {
+                            setSelectedMedicine(medicine);
+                            setSearchTerm('');
+                          }}
+                          className="w-full p-4 text-left hover:bg-primary-50 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-800">{medicine.name}</p>
+                              <p className="text-sm text-gray-600">{medicine.category}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Batch: {batch.batchNumber || 'N/A'} | Rack: {batch.rackNumber || 'N/A'} | Stock: {medicine.quantity}
+                              </p>
+                            </div>
+                            <p className="font-bold text-primary-600">{formatCurrency(medicine.sellingPrice)}</p>
                           </div>
-                          <p className="font-bold text-primary-600">{formatCurrency(medicine.sellingPrice)}</p>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -461,15 +465,15 @@ const Billing = () => {
                 <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                   <div>
                     <span className="text-gray-600">Batch:</span>
-                    <span className="ml-2 font-semibold">{selectedMedicine.batchNumber}</span>
+                    <span className="ml-2 font-semibold">{selectedMedicine.batches && selectedMedicine.batches[0] ? selectedMedicine.batches[0].batchNumber : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Rack:</span>
-                    <span className="ml-2 font-semibold">{selectedMedicine.rackNumber}</span>
+                    <span className="ml-2 font-semibold">{selectedMedicine.batches && selectedMedicine.batches[0] ? selectedMedicine.batches[0].rackNumber : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Expiry:</span>
-                    <span className="ml-2 font-semibold">{selectedMedicine.expiryDate}</span>
+                    <span className="ml-2 font-semibold">{selectedMedicine.batches && selectedMedicine.batches[0] && selectedMedicine.batches[0].expiryDate ? new Date(selectedMedicine.batches[0].expiryDate).toLocaleDateString() : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Available:</span>

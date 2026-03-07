@@ -16,7 +16,7 @@ export const getDaysUntilExpiry = (expiryDate) => {
  */
 export const getExpiryStatus = (expiryDate) => {
   const days = getDaysUntilExpiry(expiryDate);
-  
+
   if (days < 0) {
     return { status: 'expired', color: 'red', label: 'Expired', days };
   } else if (days <= 30) {
@@ -76,41 +76,59 @@ export const formatDateTime = (date) => {
 };
 
 /**
- * Sort medicines by FEFO (First Expiry First Out)
+ * Sort medicines by FEFO (First Expiry First Out) using primary batch
  */
 export const sortByFEFO = (medicines) => {
   return [...medicines].sort((a, b) => {
-    return new Date(a.expiryDate) - new Date(b.expiryDate);
+    const aExpiry = (a.batches && a.batches.length > 0) ? new Date(a.batches[0].expiryDate) : new Date('2099-12-31');
+    const bExpiry = (b.batches && b.batches.length > 0) ? new Date(b.batches[0].expiryDate) : new Date('2099-12-31');
+    return aExpiry - bExpiry;
   });
 };
 
 /**
- * Filter medicines by search query
+ * Filter medicines by search query gracefully handling batches
  */
 export const filterMedicines = (medicines, searchQuery) => {
   if (!searchQuery) return medicines;
-  
+
   const query = searchQuery.toLowerCase();
-  return medicines.filter(med => 
-    med.name.toLowerCase().includes(query) ||
-    med.category.toLowerCase().includes(query) ||
-    med.batchNumber.toLowerCase().includes(query) ||
-    med.rackNumber.toLowerCase().includes(query)
-  );
+  return medicines.filter(med => {
+    const matchesName = med.name.toLowerCase().includes(query);
+    const matchesCategory = med.category.toLowerCase().includes(query);
+
+    // Check if ANY batch matches the search criteria
+    const matchesBatch = med.batches && med.batches.some(b =>
+      (b.batchNumber && b.batchNumber.toLowerCase().includes(query)) ||
+      (b.rackNumber && b.rackNumber.toLowerCase().includes(query))
+    );
+
+    return matchesName || matchesCategory || matchesBatch;
+  });
 };
 
 /**
- * Get dashboard KPIs
+ * Get dashboard KPIs based on cumulative batch totals and closest expiry
  */
 export const calculateKPIs = (medicines) => {
   const total = medicines.length;
   const lowStock = medicines.filter(m => getStockStatus(m.quantity, m.reorderLevel).status === 'low').length;
+
+  // Expiry is relative to the absolute closest batch for any medicine
   const nearExpiry = medicines.filter(m => {
-    const status = getExpiryStatus(m.expiryDate);
+    if (!m.batches || m.batches.length === 0) return false;
+    // Sort batches inside to find closest expiry for this med
+    const closestBatch = [...m.batches].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0];
+    const status = getExpiryStatus(closestBatch.expiryDate);
     return status.status === 'critical' || status.status === 'warning';
   }).length;
-  const expired = medicines.filter(m => getExpiryStatus(m.expiryDate).status === 'expired').length;
-  
+
+  const expired = medicines.filter(m => {
+    if (!m.batches || m.batches.length === 0) return false;
+    const closestBatch = [...m.batches].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0];
+    return getExpiryStatus(closestBatch.expiryDate).status === 'expired';
+  }).length;
+
   return { total, lowStock, nearExpiry, expired };
 };
 
@@ -129,6 +147,6 @@ export const calculateBillTotals = (items) => {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   const tax = subtotal * 0.1; // 10% tax
   const total = subtotal + tax;
-  
+
   return { subtotal, tax, total };
 };

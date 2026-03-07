@@ -84,16 +84,17 @@ const MedicineInventory = () => {
 
     // Convert API records to the shape expected by the grid
     function convertRecordToRow(m) {
+        const primaryBatch = m.batches && m.batches.length > 0 ? m.batches[0] : {};
         return {
             _id: String(m._id),
-            medicineId: m.batchNumber || m.medicineId || String(m._id),
+            medicineId: primaryBatch.batchNumber || m.medicineId || String(m._id),
             name: m.name,
             category: m.category,
             purchasePrice: m.purchasePrice,
             unitPrice: m.sellingPrice || m.unitPrice,
             stockQuantity: m.quantity || m.stockQuantity || 0,
-            rackNumber: m.rackNumber,
-            expiryDate: m.expiryDate,
+            rackNumber: primaryBatch.rackNumber || m.rackNumber,
+            expiryDate: primaryBatch.expiryDate || m.expiryDate,
             supplierId: m.supplier || null,
         };
     }
@@ -240,15 +241,18 @@ const MedicineInventory = () => {
         setDialog({ ...dialog, open: false });
 
         const standardized = {
-            batchNumber: form.medicineId,
             name: form.name,
             category: form.category,
             purchasePrice: Number(form.purchasePrice),
             sellingPrice: Number(form.unitPrice),
             quantity: Number(form.stockQuantity),
-            rackNumber: form.rackNumber,
-            expiryDate: form.expiryDate ? dayjs(form.expiryDate).toISOString() : null,
             supplier: form.supplierId,
+            batches: [{
+                batchNumber: form.medicineId,
+                expiryDate: form.expiryDate ? dayjs(form.expiryDate).toISOString() : null,
+                quantity: Number(form.stockQuantity),
+                rackNumber: form.rackNumber
+            }]
         };
 
         try {

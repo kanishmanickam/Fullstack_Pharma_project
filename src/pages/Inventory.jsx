@@ -85,26 +85,28 @@ const Inventory = () => {
                   </td>
                 </tr>
               ) : filteredMedicines.map((medicine) => {
-                const expiryStatus = getExpiryStatus(medicine.expiryDate);
+                const primaryBatch = medicine.batches && medicine.batches.length > 0 ? medicine.batches[0] : {};
+                const expiryValue = primaryBatch.expiryDate || 'N/A';
+                const expiryStatus = getExpiryStatus(expiryValue !== 'N/A' ? expiryValue : new Date());
                 const stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
 
                 return (
-                  <tr key={medicine._id || medicine.batchNumber} className="hover:bg-gray-50">
+                  <tr key={medicine._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900">{medicine.name}</p>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{medicine.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 font-mono">{medicine.batchNumber}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 font-mono">{primaryBatch.batchNumber || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${expiryStatus.color === 'red' ? 'bg-red-100 text-red-700' :
                         expiryStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-green-100 text-green-700'
                         }`}>
-                        {medicine.expiryDate} ({expiryStatus.days}d)
+                        {expiryValue !== 'N/A' ? new Date(expiryValue).toLocaleDateString() : 'N/A'} ({expiryStatus.days || 0}d)
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold">{medicine.quantity}</td>
-                    <td className="px-6 py-4 text-sm font-mono font-semibold">{medicine.rackNumber}</td>
+                    <td className="px-6 py-4 text-sm font-mono font-semibold">{primaryBatch.rackNumber || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stockStatus.color === 'red' ? 'bg-red-100 text-red-700' :
                         stockStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :

@@ -628,6 +628,7 @@ const auditLogSchema = new mongoose.Schema(
         'ORDER_CREATED',
         'ORDER_STATUS_UPDATE',
         'REORDER_APPROVED',
+        'FORECAST_RUN',
         'DELETE',
         'OTHER',
       ],
@@ -686,9 +687,91 @@ auditLogSchema.index({ module: 1, timestamp: -1 });
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
+// ============ FORECAST PARAMETERS SCHEMA ============
+const forecastParametersSchema = new mongoose.Schema(
+  {
+    forecastHorizon: {
+      type: Number,
+      default: 4, // 4 weeks
+    },
+    leadTimeDays: {
+      type: Number,
+      default: 7,
+    },
+    safetyStockPercent: {
+      type: Number,
+      default: 20,
+    },
+    seasonalMultipliers: {
+      jan: { type: Number, default: 1.0 },
+      feb: { type: Number, default: 1.0 },
+      mar: { type: Number, default: 1.1 },
+      apr: { type: Number, default: 1.2 },
+      may: { type: Number, default: 1.2 },
+      jun: { type: Number, default: 1.1 },
+      jul: { type: Number, default: 1.3 }, // Monsoon/Malaria season
+      aug: { type: Number, default: 1.3 },
+      sep: { type: Number, default: 1.2 },
+      oct: { type: Number, default: 1.4 }, // Flu/Allergy season
+      nov: { type: Number, default: 1.4 },
+      dec: { type: Number, default: 1.2 },
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+  },
+  { timestamps: true }
+);
+
+const ForecastParameters = mongoose.model('ForecastParameters', forecastParametersSchema);
+
+// ============ FORECAST RECOMMENDATION SCHEMA ============
+const forecastRecommendationSchema = new mongoose.Schema(
+  {
+    medicineId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Medicine',
+      required: true,
+    },
+    medicineName: String,
+    category: String,
+    currentStock: Number,
+    predictedDemand: Number,
+    optimalReorderQty: Number,
+    restockingDate: Date,
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'critical'],
+      default: 'medium',
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'adjusted', 'rejected'],
+      default: 'pending',
+    },
+    seasonalFactor: {
+      type: Number,
+      default: 1.0,
+    },
+    approvedQty: Number,
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    runDate: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
+
+const ForecastRecommendation = mongoose.model('ForecastRecommendation', forecastRecommendationSchema);
+
 export {
   User,
-  Category, // Exported Category
+  Category,
   Medicine,
   Customer,
   Bill,
@@ -699,6 +782,7 @@ export {
   Notification,
   Prescription,
   Order,
-  // Supplier moved to supplierModels.js
+  ForecastParameters,
+  ForecastRecommendation,
   AuditLog,
 };

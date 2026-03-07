@@ -65,6 +65,9 @@ const ExcelUpload = () => {
       setUploadResult({ success: true, log: res.data.uploadLog });
       setSelectedFile(null);
       fetchHistory();
+      // Continuous Learning: Trigger AI forecast retraining
+      axiosInstance.post('/forecast/retrain').catch(e => console.error('AI Retrain trigger failed:', e));
+
     } catch (err) {
       setUploadResult({
         success: false,
@@ -147,8 +150,8 @@ const ExcelUpload = () => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-5 py-2.5 font-semibold capitalize text-sm border-b-2 transition-colors ${activeTab === tab
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
               {tab === 'import' ? 'Import Excel' : 'Upload History'}
@@ -166,10 +169,10 @@ const ExcelUpload = () => {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`relative border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${dragOver
-                    ? 'border-blue-500 bg-blue-50'
-                    : selectedFile
-                      ? 'border-green-400 bg-green-50'
-                      : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50'
+                  ? 'border-blue-500 bg-blue-50'
+                  : selectedFile
+                    ? 'border-green-400 bg-green-50'
+                    : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50'
                   }`}
               >
                 <input

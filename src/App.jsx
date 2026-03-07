@@ -16,6 +16,8 @@ import SupplierManagement from './pages/reorder/SupplierManagement';
 import ReorderReview from './pages/reorder/ReorderReview';
 import UserManagement from './pages/admin/UserManagement';
 import ActivityLog from './pages/ActivityLog';
+import DemandSetup from './pages/ai/DemandSetup';
+import ForecastReview from './pages/ai/ForecastReview';
 
 function App() {
   return (
@@ -140,7 +142,28 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* AI Demand Forecasting Routes */}
+          <Route
+            path="/ai/demand-setup"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <DemandSetup />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai/forecast-review"
+            element={
+              <ProtectedRoute allowedRoles={['owner', 'staff']}>
+                <ForecastReview />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
+
         </Routes>
       </Router>
     </AuthProvider>

@@ -20,8 +20,8 @@ import supplierRoutes from './routes/supplierRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
+import forecastRoutes from './routes/forecastRoutes.js';
 import { auditLogger } from './middleware/auditLogger.js';
-
 // Load environment variables
 dotenv.config();
 
@@ -78,6 +78,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/forecast', forecastRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));

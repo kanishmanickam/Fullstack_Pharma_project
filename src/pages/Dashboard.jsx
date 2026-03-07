@@ -557,12 +557,15 @@ export default function Dashboard() {
               <>
                 <NavCard to="/stock-intelligence" icon={<FaBrain />} label="Stock Intelligence" color="orange" />
                 <NavCard to="/financial-reports" icon={<FaChartLine />} label="Financial Reports" color="indigo" />
+                <NavCard to="/ai/demand-setup" icon={<FaBrain />} label="AI Forecast Setup" color="purple" />
               </>
             )}
             <NavCard to="/customers" icon={<FaBoxes />} label="Customers" color="teal" />
+            <NavCard to="/ai/forecast-review" icon={<FaChartLine />} label="Forecast Review" color="blue" />
             {isOwner && (
               <NavCard to="/activity-log" icon={<FaList />} label="Activity Log" color="red" />
             )}
+
           </div>
         </section>
       </div>

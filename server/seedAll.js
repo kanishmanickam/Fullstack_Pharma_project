@@ -30,7 +30,7 @@ const seedDatabase = async () => {
         // ── 0. CLEAR EXISTING DATA ──────────────────────────────────────────
         console.log('Cleaning existing data across all collections...');
         await Promise.all([
-            User.deleteMany({}), Medicine.deleteMany({}),
+            Medicine.deleteMany({}),
             Customer.deleteMany({}), Bill.deleteMany({}), Supplier.deleteMany({}),
             InventoryHistory.deleteMany({}), AuditLog.deleteMany({}), PurchaseOrder.deleteMany({}),
             Alert.deleteMany({}), Notification.deleteMany({}), Report.deleteMany({}),
@@ -38,23 +38,15 @@ const seedDatabase = async () => {
         ]);
         console.log('✓ Existing data cleared');
 
-        // ── 1. SEED USERS ───────────────────────────────────────────────────
-        const bcryptjs = await import('bcryptjs');
-        const salt = await bcryptjs.default.genSalt(10);
-        const adminPass = await bcryptjs.default.hash('admin123', salt);
-        const staffPass = await bcryptjs.default.hash('staff123', salt);
-        const pharmPass = await bcryptjs.default.hash('pharmacist123', salt);
-
-        const userData = [
-            { username: 'admin', email: 'admin@medistock.com', password: adminPass, role: 'owner' },
-            { username: 'staff', email: 'staff@medistock.com', password: staffPass, role: 'staff' },
-            { username: 'pharmacist', email: 'pharmacist@medistock.com', password: pharmPass, role: 'staff' },
-        ];
-        const users = await User.insertMany(userData);
-        const owner = users.find(u => u.role === 'owner');
+        // ── 1. FETCH USERS (Required for Analytics Data) ───────────────────
+        const users = await User.find({});
+        if (users.length === 0) {
+            throw new Error("No users found in database. Required to seed analytics. Please run the base seed script or create users first.");
+        }
+        const owner = users.find(u => u.role === 'owner') || users[0];
         const staffList = users.filter(u => u.role === 'staff');
         const getStaff = () => staffList.length > 0 ? staffList[rand(0, staffList.length - 1)] : owner;
-        console.log('✓ Users seeded');
+        console.log('✓ Using existing secure users');
 
         // ── 2. SEED SUPPLIERS ───────────────────────────────────────────────
         const supplierData = [
@@ -345,10 +337,6 @@ const seedDatabase = async () => {
       ║ ├─ Alerts/Notifs      : ${alerts.length.toString().padEnd(30)}║
       ║ ├─ Orders / Prescrips : 1 / 1                         ║
       ║ └─ Misc (Reports)     : generated                       ║
-      ╠═════════════════════════════════════════════════════════╣
-      ║ Test Credentials:                                       ║
-      ║ Owner: admin / admin123                                 ║
-      ║ Staff: staff / staff123                                 ║
       ╚═════════════════════════════════════════════════════════╝
         `);
 

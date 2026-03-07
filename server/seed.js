@@ -11,8 +11,8 @@ const seedDatabase = async () => {
     await connectDB();
     console.log('Connected to MongoDB');
 
-    // Clear existing data
-    await User.deleteMany({});
+    // Clear existing data (preserves Users)
+    // await User.deleteMany({});
     await Category.deleteMany({});
     await Medicine.deleteMany({});
     await Customer.deleteMany({});
@@ -43,35 +43,7 @@ const seedDatabase = async () => {
     const categoryMap = {};
     categoryDocs.forEach(c => { categoryMap[c.name] = c._id; });
 
-    // Seed users
-    const userData = [
-      {
-        username: 'admin',
-        email: 'admin@medistock.com',
-        password: 'admin123',
-        role: 'owner',
-      },
-      {
-        username: 'staff',
-        email: 'staff@medistock.com',
-        password: 'staff123',
-        role: 'staff',
-      },
-      {
-        username: 'pharmacist',
-        email: 'pharmacist@medistock.com',
-        password: 'pharmacist123',
-        role: 'staff',
-      },
-    ];
-
-    const users = [];
-    for (const u of userData) {
-      const createdUser = await User.create(u);
-      users.push(createdUser);
-    }
-
-    console.log('✓ Users seeded');
+    // Users are no longer seeded here to prevent hardcoded credentials.
 
     // Seed medicines
     const medicineData = [
@@ -296,14 +268,9 @@ const seedDatabase = async () => {
       ╔════════════════════════════════════════╗
       ║    Database Seeding Completed!         ║
       ╠════════════════════════════════════════╣
-      ║ Users: ${users.length}                            ║
-      ║ Medicines: ${medicines.length}                      ║
+      ║ Users: Kept Existing                            ║
+      ║ Medicine: ${medicines.length}                      ║
       ║ Customers: ${customers.length}                       ║
-      ╠════════════════════════════════════════╣
-      ║ Test Credentials:                      ║
-      ║ Owner: admin / admin123                ║
-      ║ Staff: staff / staff123                ║
-      ║ Customer: customer / customer123       ║
       ╚════════════════════════════════════════╝
     `);
 

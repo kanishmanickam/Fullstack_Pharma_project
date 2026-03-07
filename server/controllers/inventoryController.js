@@ -231,18 +231,26 @@ export const searchMedicines = async (req, res) => {
       });
     }
 
+    const categories = await Category.find({ name: { $regex: query, $options: 'i' } });
+    const categoryIds = categories.map(c => c._id);
+
     const medicines = await Medicine.find({
       $or: [
         { name: { $regex: query, $options: 'i' } },
-        { category: { $regex: query, $options: 'i' } },
+        { category: { $in: categoryIds } },
         { batchNumber: { $regex: query, $options: 'i' } },
       ],
-    });
+    }).populate('category', 'name').lean();
+
+    const formattedMedicines = medicines.map(m => ({
+      ...m,
+      category: m.category?.name || 'Unknown'
+    }));
 
     res.status(200).json({
       success: true,
-      count: medicines.length,
-      medicines: sortByFEFO(medicines),
+      count: formattedMedicines.length,
+      medicines: sortByFEFO(formattedMedicines),
     });
   } catch (error) {
     log('ERROR', 'Search medicines error', { error: error.message });

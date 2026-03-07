@@ -562,8 +562,8 @@ const MedicineInventory = () => {
                                         label="Supplier"
                                         onChange={handleChange('supplierId')}
                                     >
-                                        {suppliers.map((s) => (
-                                            <MenuItem key={s.name} value={s.name}>
+                                        {suppliers.map((s, idx) => (
+                                            <MenuItem key={s._id || idx} value={s.name}>
                                                 {s.name}
                                             </MenuItem>
                                         ))}

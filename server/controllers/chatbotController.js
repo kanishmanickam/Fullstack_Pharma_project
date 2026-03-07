@@ -8,6 +8,8 @@ const GEMINI_API_URL =
   process.env.GEMINI_API_URL ||
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
+const userChatHistories = new Map(); // Store conversation memory per user
+
 /**
  * Fetch a live snapshot of the inventory and format it as a readable context block.
  */
@@ -23,24 +25,26 @@ const buildInventoryContext = async () => {
   const expired = medicines.filter(m => m.batches && m.batches.some(b => isExpired(b.expiryDate)));
 
   const medicineList = medicines.map(m => {
-    const mainBatch = m.batches && m.batches.length > 0 ? m.batches[0] : {};
-    return `• ${m.name} | Category: ${m.category} | Batch: ${mainBatch.batchNumber || 'N/A'} | ` +
-    `Expiry: ${mainBatch.expiryDate ? new Date(mainBatch.expiryDate).toLocaleDateString() : 'N/A'} | Qty: ${m.quantity} | ` +
-    `Purchase: ₹${m.purchasePrice} | Selling: ₹${m.sellingPrice} | ` +
-    `Rack: ${mainBatch.rackNumber || 'N/A'} | Reorder Level: ${m.reorderLevel} | Supplier: ${m.supplier}`;
-  }).join('\\n');
+    // SCHEMA-AWARE: Only consider batches with quantity > 0 AND expiryDate > today
+    const activeBatches = (m.batches || []).filter(b => b.quantity > 0 && new Date(b.expiryDate) > new Date());
+
+    let batchInfo = 'Status: Out of Stock / Expired';
+    if (activeBatches.length > 0) {
+      batchInfo = 'Active Batches: ' + activeBatches.map(b => `[Rack: ${b.rackNumber || 'N/A'}, Qty: ${b.quantity}, Exp: ${new Date(b.expiryDate).toLocaleDateString()}]`).join(', ');
+    }
+
+    return `• Name: ${m.name} | Category: ${m.category || 'N/A'} | ${batchInfo} | Total Qty: ${m.quantity} | Price: ₹${m.sellingPrice}`;
+  }).join('\n');
 
   return `
 === LIVE PHARMACY INVENTORY DATA (as of ${new Date().toLocaleString('en-IN')}) ===
 
 SUMMARY:
 - Total medicines: ${medicines.length}
-- Low stock (at or below reorder level): ${lowStock.length} → ${lowStock.map(m => m.name).join(', ') || 'None'}
-- Near expiry (within 30 days): ${nearExpiry.length} → ${nearExpiry.map(m => `${m.name} (${m.batches && m.batches[0] ? new Date(m.batches[0].expiryDate).toLocaleDateString() : 'N/A'})`).join(', ') || 'None'}
-- Expired medicines: ${expired.length} → ${expired.map(m => m.name).join(', ') || 'None'}
+- Low stock: ${lowStock.length}
 - Today's sales: ₹${todaySales.toFixed(2)} across ${todayBills.length} bill(s)
 
-FULL MEDICINE LIST:
+FULL MEDICINE LIST WITH VERIFIED BATCHES & RACK NUMBERS:
 ${medicineList || 'No medicines in inventory.'}
 ===
 `;
@@ -49,49 +53,53 @@ ${medicineList || 'No medicines in inventory.'}
 /**
  * Build the system prompt with live inventory injected.
  */
-const buildPrompt = (inventoryContext, userMessage, language) => {
+const buildSystemPrompt = (inventoryContext, language) => {
   const langInstruction = language === 'ta'
     ? 'Respond in Tamil language.'
     : 'Respond in English.';
 
-  return `You are MediStock AI, an intelligent pharmacy inventory assistant with access to LIVE inventory data.
+  return `You are MediStock AI, an intelligent, clinical, and highly professional Context-Aware Inventory Assistant for pharmacists.
 
-Your capabilities:
-- Answer specific questions about stock levels, prices, expiry dates, rack locations, suppliers
-- Identify low stock and near-expiry medicines
-- Calculate totals, compare prices, check availability
-- Provide reorder recommendations
-- Report today's sales summary
-
-Rules:
-- Only discuss pharmacy inventory topics
-- Do NOT provide medical advice (dosage, treatment, diagnosis)
-- Be concise and accurate — use the real data provided below
-- If a medicine is not found in the list, say so clearly
-- ${langInstruction}
+CORE DIRECTIVES:
+1. SCHEMA-AWARE VERIFICATION: A medicine is ONLY considered "in stock" if the 'Active Batches' property explicitly lists a batch (meaning Qty > 0 and Expiry > Today). If a medicine says "Status: Out of Stock / Expired", you MUST tell the user it is locally unavailable.
+2. PROACTIVE ASSISTANCE: If the requested item is expired or out of stock, YOU MUST proactively search the live inventory list for other available medicines with the EXACT SAME Category and suggest them as alternatives.
+3. VERIFY RACK NUMBERS: Whenever confirming stock for a medicine, ALWAYS extract and provide the Rack Number from the Active Batches text so the pharmacist knows exactly where to retrieve it.
+4. CLINICAL TONE: Maintain a professional, polite, and clinical tone at all times. Do NOT provide medical advice (dosage, diagnosis). Only discuss inventory.
+5. ${langInstruction}
 
 ${inventoryContext}
-
-User question: ${userMessage}`;
+`;
 };
 
 /**
  * Call Gemini API with the full context prompt.
  */
-const callGeminiAPI = async (prompt) => {
+const callGeminiAPI = async (systemPrompt, chatHistory, userMessage) => {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured on the server');
   }
 
+  // Convert tracked chat history into Gemini format
+  const contents = chatHistory.map(turn => ({
+    role: turn.role, // 'user' or 'model'
+    parts: [{ text: turn.text }]
+  }));
+
+  // Append current user message with hidden background system context
+  contents.push({
+    role: 'user',
+    parts: [{ text: `[SYSTEM CONTEXT - HIDDEN FROM USER]\n${systemPrompt}\n[END SYSTEM]\n\nUser Message: ${userMessage}` }]
+  });
+
   const { data } = await axios.post(
     `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
     {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents,
       generationConfig: {
-        temperature: 0.4,
+        temperature: 0.3,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 512,
+        maxOutputTokens: 600,
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -157,8 +165,23 @@ export const chatbotQuery = async (req, res) => {
 
     try {
       const inventoryContext = await buildInventoryContext();
-      const prompt = buildPrompt(inventoryContext, message, language);
-      response = await callGeminiAPI(prompt);
+      const systemPrompt = buildSystemPrompt(inventoryContext, language);
+
+      // Pull history for the user session (fallback to 'default' if no user session middleware hooked up yet)
+      const userId = req.user?.id || 'default_user';
+      let history = userChatHistories.get(userId) || [];
+
+      response = await callGeminiAPI(systemPrompt, history, message);
+
+      // Update Conversation Memory (keep only last 3 turns = 6 messages)
+      history.push({ role: 'user', text: message });
+      history.push({ role: 'model', text: response || 'I encountered an error processing that.' });
+
+      if (history.length > 6) {
+        history = history.slice(history.length - 6);
+      }
+      userChatHistories.set(userId, history);
+
     } catch (geminiError) {
       log('WARN', 'Gemini API failed, using keyword fallback', { error: geminiError.message });
     }

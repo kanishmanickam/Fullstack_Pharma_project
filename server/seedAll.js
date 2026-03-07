@@ -39,10 +39,16 @@ const seedDatabase = async () => {
         console.log('✓ Existing data cleared');
 
         // ── 1. SEED USERS ───────────────────────────────────────────────────
+        const bcryptjs = await import('bcryptjs');
+        const salt = await bcryptjs.default.genSalt(10);
+        const adminPass = await bcryptjs.default.hash('admin123', salt);
+        const staffPass = await bcryptjs.default.hash('staff123', salt);
+        const pharmPass = await bcryptjs.default.hash('pharmacist123', salt);
+
         const userData = [
-            { username: 'admin', email: 'admin@medistock.com', password: 'admin123', role: 'owner' },
-            { username: 'staff', email: 'staff@medistock.com', password: 'staff123', role: 'staff' },
-            { username: 'pharmacist', email: 'pharmacist@medistock.com', password: 'pharmacist123', role: 'staff' },
+            { username: 'admin', email: 'admin@medistock.com', password: adminPass, role: 'owner' },
+            { username: 'staff', email: 'staff@medistock.com', password: staffPass, role: 'staff' },
+            { username: 'pharmacist', email: 'pharmacist@medistock.com', password: pharmPass, role: 'staff' },
         ];
         const users = await User.insertMany(userData);
         const owner = users.find(u => u.role === 'owner');
@@ -181,7 +187,7 @@ const seedDatabase = async () => {
         console.log('✓ Customers Analytics synced natively');
 
         // ── 6. SEED EXCEPTIONAL ACTIVITIES (Purchase Orders, Alerts, Reorders)
-        
+
         const purchaseOrders = [];
         // Normal Purchase Orders
         for (let i = 0; i < 3; i++) {
@@ -276,10 +282,10 @@ const seedDatabase = async () => {
 
         // ── 7. SEED AUDIT LOGS ─────────────────────────────────────────────
         const auditEntries = [];
-        
+
         // Simulating the UploadLog we deleted using AuditLogs
         auditEntries.push({
-            userId: owner._id, username: owner.username, action: 'EXCEL_UPLOAD', module: 'DataImport', 
+            userId: owner._id, username: owner.username, action: 'EXCEL_UPLOAD', module: 'DataImport',
             details: {
                 fileName: 'monthly_inventory_sheet.xlsx', fileSizeBytes: 2048576,
                 totalRecords: 120, recordsSuccessful: 118, recordsFailed: 2,

@@ -19,15 +19,16 @@ const buildInventoryContext = async () => {
   const todaySales = todayBills.reduce((s, b) => s + b.grandTotal, 0);
 
   const lowStock = medicines.filter(m => m.quantity <= m.reorderLevel);
-  const nearExpiry = medicines.filter(m => isNearExpiry(m.expiryDate, 30));
-  const expired = medicines.filter(m => isExpired(m.expiryDate));
+  const nearExpiry = medicines.filter(m => m.batches && m.batches.some(b => isNearExpiry(b.expiryDate, 30)));
+  const expired = medicines.filter(m => m.batches && m.batches.some(b => isExpired(b.expiryDate)));
 
-  const medicineList = medicines.map(m =>
-    `• ${m.name} | Category: ${m.category} | Batch: ${m.batchNumber} | ` +
-    `Expiry: ${m.expiryDate} | Qty: ${m.quantity} | ` +
+  const medicineList = medicines.map(m => {
+    const mainBatch = m.batches && m.batches.length > 0 ? m.batches[0] : {};
+    return `• ${m.name} | Category: ${m.category} | Batch: ${mainBatch.batchNumber || 'N/A'} | ` +
+    `Expiry: ${mainBatch.expiryDate ? new Date(mainBatch.expiryDate).toLocaleDateString() : 'N/A'} | Qty: ${m.quantity} | ` +
     `Purchase: ₹${m.purchasePrice} | Selling: ₹${m.sellingPrice} | ` +
-    `Rack: ${m.rackNumber} | Reorder Level: ${m.reorderLevel} | Supplier: ${m.supplier}`
-  ).join('\n');
+    `Rack: ${mainBatch.rackNumber || 'N/A'} | Reorder Level: ${m.reorderLevel} | Supplier: ${m.supplier}`;
+  }).join('\\n');
 
   return `
 === LIVE PHARMACY INVENTORY DATA (as of ${new Date().toLocaleString('en-IN')}) ===
@@ -35,7 +36,7 @@ const buildInventoryContext = async () => {
 SUMMARY:
 - Total medicines: ${medicines.length}
 - Low stock (at or below reorder level): ${lowStock.length} → ${lowStock.map(m => m.name).join(', ') || 'None'}
-- Near expiry (within 30 days): ${nearExpiry.length} → ${nearExpiry.map(m => `${m.name} (${m.expiryDate})`).join(', ') || 'None'}
+- Near expiry (within 30 days): ${nearExpiry.length} → ${nearExpiry.map(m => `${m.name} (${m.batches && m.batches[0] ? new Date(m.batches[0].expiryDate).toLocaleDateString() : 'N/A'})`).join(', ') || 'None'}
 - Expired medicines: ${expired.length} → ${expired.map(m => m.name).join(', ') || 'None'}
 - Today's sales: ₹${todaySales.toFixed(2)} across ${todayBills.length} bill(s)
 
@@ -115,23 +116,24 @@ const keywordFallback = (message, medicines, language) => {
   if (lower.includes('low stock') || lower.includes('reorder')) {
     const low = medicines.filter(m => m.quantity <= m.reorderLevel);
     if (!low.length) return ta ? 'அனைத்து மருந்துகளும் போதுமான அளவில் உள்ளன.' : 'All medicines are adequately stocked.';
-    return (ta ? 'குறைந்த இருப்பு மருந்துகள்:\n' : 'Low stock medicines:\n') +
-      low.map(m => `• ${m.name}: ${m.quantity} units (reorder: ${m.reorderLevel})`).join('\n');
+    return (ta ? 'குறைந்த இருப்பு மருந்துகள்:\\n' : 'Low stock medicines:\\n') +
+      low.map(m => `• ${m.name}: ${m.quantity} units (reorder: ${m.reorderLevel})`).join('\\n');
   }
 
   if (lower.includes('expir')) {
-    const near = medicines.filter(m => isNearExpiry(m.expiryDate, 30));
+    const near = medicines.filter(m => m.batches && m.batches.some(b => isNearExpiry(b.expiryDate, 30)));
     if (!near.length) return ta ? 'அடுத்த 30 நாட்களில் காலாவதியாகும் மருந்துகள் இல்லை.' : 'No medicines expiring in the next 30 days.';
-    return (ta ? 'விரைவில் காலாவதியாகும் மருந்துகள்:\n' : 'Medicines expiring soon:\n') +
-      near.map(m => `• ${m.name}: ${m.expiryDate}`).join('\n');
+    return (ta ? 'விரைவில் காலாவதியாகும் மருந்துகள்:\\n' : 'Medicines expiring soon:\\n') +
+      near.map(m => `• ${m.name}: ${m.batches && m.batches[0] ? new Date(m.batches[0].expiryDate).toLocaleDateString() : 'Unknown'}`).join('\\n');
   }
 
   // Search by name
   const found = medicines.filter(m => lower.includes(m.name.toLowerCase().split(' ')[0]));
   if (found.length) {
-    return found.map(m =>
-      `${m.name}\n  Stock: ${m.quantity} | Price: ₹${m.sellingPrice} | Rack: ${m.rackNumber} | Expiry: ${m.expiryDate}`
-    ).join('\n\n');
+    return found.map(m => {
+      const mainBatch = m.batches && m.batches.length > 0 ? m.batches[0] : {};
+      return `${m.name}\\n  Stock: ${m.quantity} | Price: ₹${m.sellingPrice} | Rack: ${mainBatch.rackNumber || 'N/A'} | Expiry: ${mainBatch.expiryDate ? new Date(mainBatch.expiryDate).toLocaleDateString() : 'N/A'}`
+    }).join('\\n\\n');
   }
 
   return ta

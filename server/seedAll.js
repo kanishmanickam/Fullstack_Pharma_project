@@ -2,11 +2,11 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import {
-    User, Medicine, Customer, Bill, Category,
+    User, Medicine, Customer, Bill,
     InventoryHistory, AuditLog, Alert, Report,
-    Notification, Prescription, Order, UploadLog
+    Notification, Prescription, Order
 } from './models/index.js';
-import { Supplier, PurchaseOrder, ReorderSuggestion } from './models/supplierModels.js';
+import { Supplier, PurchaseOrder } from './models/supplierModels.js';
 
 dotenv.config();
 
@@ -28,31 +28,17 @@ const seedDatabase = async () => {
         console.log('Connected to MongoDB');
 
         // ── 0. CLEAR EXISTING DATA ──────────────────────────────────────────
-        console.log('Cleaning existing data across all 15 collections...');
+        console.log('Cleaning existing data across all collections...');
         await Promise.all([
-            User.deleteMany({}), Category.deleteMany({}), Medicine.deleteMany({}),
+            User.deleteMany({}), Medicine.deleteMany({}),
             Customer.deleteMany({}), Bill.deleteMany({}), Supplier.deleteMany({}),
             InventoryHistory.deleteMany({}), AuditLog.deleteMany({}), PurchaseOrder.deleteMany({}),
             Alert.deleteMany({}), Notification.deleteMany({}), Report.deleteMany({}),
-            Prescription.deleteMany({}), Order.deleteMany({}), ReorderSuggestion.deleteMany({}),
-            UploadLog.deleteMany({})
+            Prescription.deleteMany({}), Order.deleteMany({})
         ]);
         console.log('✓ Existing data cleared');
 
-        // ── 1. SEED CATEGORIES ──────────────────────────────────────────────
-        const categoryNames = [
-            'Analgesic', 'Antibiotic', 'Antacid', 'Cough Suppressant',
-            'Anti-inflammatory', 'Vitamin', 'Topical', 'Antihistamine',
-            'Antidiabetic', 'Antihypertensive', 'Tablet', 'Injection', 'Drops'
-        ];
-        const categoryDocs = await Category.insertMany(
-            categoryNames.map(name => ({ name, description: `Standard ${name} Category`, isApproved: true }))
-        );
-        const categoryMap = {};
-        categoryDocs.forEach(c => { categoryMap[c.name] = c._id; });
-        console.log(`✓ ${categoryDocs.length} Categories seeded`);
-
-        // ── 2. SEED USERS ───────────────────────────────────────────────────
+        // ── 1. SEED USERS ───────────────────────────────────────────────────
         const userData = [
             { username: 'admin', email: 'admin@medistock.com', password: 'admin123', role: 'owner' },
             { username: 'staff', email: 'staff@medistock.com', password: 'staff123', role: 'staff' },
@@ -64,7 +50,7 @@ const seedDatabase = async () => {
         const getStaff = () => staffList.length > 0 ? staffList[rand(0, staffList.length - 1)] : owner;
         console.log('✓ Users seeded');
 
-        // ── 3. SEED SUPPLIERS ───────────────────────────────────────────────
+        // ── 2. SEED SUPPLIERS ───────────────────────────────────────────────
         const supplierData = [
             {
                 supplier_name: "MedSupply India",
@@ -91,16 +77,12 @@ const seedDatabase = async () => {
                 medicine_categories: ["Tablet", "Injection", "Drops"], is_active: true
             }
         ];
-        const mappedSuppliers = supplierData.map(s => ({
-            ...s,
-            medicine_categories: s.medicine_categories.map(c => categoryMap[c]).filter(id => id)
-        }));
-        const suppliers = await Supplier.insertMany(mappedSuppliers);
+        const suppliers = await Supplier.insertMany(supplierData);
         const supplierMap = {};
         suppliers.forEach(s => { supplierMap[s.supplier_name] = s._id; });
         console.log(`✓ ${suppliers.length} Suppliers seeded`);
 
-        // ── 4. SEED CUSTOMERS ───────────────────────────────────────────────
+        // ── 3. SEED CUSTOMERS ───────────────────────────────────────────────
         const customerData = [
             { name: 'Rajesh Kumar', phone: '9876543210', email: 'rajesh.k@example.com', customerType: 'regular', address: '123 Main St', city: 'Chennai', totalPurchases: 0, totalSpent: 0 },
             { name: 'Priya Sharma', phone: '9876543211', email: 'priya.sharma@example.com', customerType: 'regular', address: '456 Oak Avenue', city: 'Chennai', totalPurchases: 0, totalSpent: 0 },
@@ -113,31 +95,30 @@ const seedDatabase = async () => {
         const customers = await Customer.insertMany(customerData);
         console.log(`✓ ${customers.length} Customers seeded`);
 
-        // ── 5. SEED MEDICINES ───────────────────────────────────────────────
+        // ── 4. SEED MEDICINES & BATCHES ─────────────────────────────────────
         const medicineData = [
-            { name: 'Aspirin', category: 'Analgesic', batchNumber: 'ASP-001', expiryDate: new Date('2025-12-31'), quantity: 500, reorderLevel: 100, purchasePrice: 5, sellingPrice: 10, rackNumber: 'A1', stockStatus: 'high', supplier: 'MedSupply India' },
-            { name: 'Amoxicillin', category: 'Antibiotic', batchNumber: 'AMX-001', expiryDate: new Date('2026-06-30'), quantity: 45, reorderLevel: 100, purchasePrice: 15, sellingPrice: 30, rackNumber: 'B2', stockStatus: 'low', supplier: 'MedSupply India' },
-            { name: 'Paracetamol', category: 'Analgesic', batchNumber: 'PAR-001', expiryDate: new Date('2025-08-15'), quantity: 200, reorderLevel: 80, purchasePrice: 2, sellingPrice: 5, rackNumber: 'A2', stockStatus: 'high', supplier: 'HealthCare Solutions' },
-            { name: 'Omeprazole', category: 'Antacid', batchNumber: 'OMP-001', expiryDate: new Date('2026-02-10'), quantity: 80, reorderLevel: 100, purchasePrice: 8, sellingPrice: 18, rackNumber: 'C1', stockStatus: 'medium', supplier: 'PharmaHub Distributors' },
-            { name: 'Cough Syrup', category: 'Cough Suppressant', batchNumber: 'CS-001', expiryDate: new Date('2025-05-20'), quantity: 120, reorderLevel: 50, purchasePrice: 12, sellingPrice: 25, rackNumber: 'D1', stockStatus: 'high', supplier: 'HealthCare Solutions' },
-            { name: 'Ibuprofen', category: 'Anti-inflammatory', batchNumber: 'IBU-001', expiryDate: new Date('2026-11-30'), quantity: 30, reorderLevel: 100, purchasePrice: 6, sellingPrice: 12, rackNumber: 'A3', stockStatus: 'low', supplier: 'MedSupply India' },
-            { name: 'Vitamin C', category: 'Vitamin', batchNumber: 'VIT-001', expiryDate: new Date('2027-01-31'), quantity: 300, reorderLevel: 100, purchasePrice: 3, sellingPrice: 8, rackNumber: 'E1', stockStatus: 'high', supplier: 'PharmaHub Distributors' },
-            { name: 'Antibiotic Cream', category: 'Topical', batchNumber: 'AC-001', expiryDate: new Date('2026-03-25'), quantity: 40, reorderLevel: 50, purchasePrice: 20, sellingPrice: 45, rackNumber: 'F1', stockStatus: 'low', supplier: 'PharmaHub Distributors' },
-            { name: 'Cetirizine', category: 'Antihistamine', batchNumber: 'CET-001', expiryDate: new Date('2026-08-15'), quantity: 150, reorderLevel: 50, purchasePrice: 4, sellingPrice: 10, rackNumber: 'B1', stockStatus: 'high', supplier: 'HealthCare Solutions' },
-            { name: 'Metformin', category: 'Antidiabetic', batchNumber: 'MET-001', expiryDate: new Date('2027-04-10'), quantity: 500, reorderLevel: 100, purchasePrice: 15, sellingPrice: 35, rackNumber: 'C2', stockStatus: 'high', supplier: 'Apollo MedSource' },
-            { name: 'Amlodipine', category: 'Antihypertensive', batchNumber: 'AML-001', expiryDate: new Date('2026-10-05'), quantity: 250, reorderLevel: 80, purchasePrice: 12, sellingPrice: 28, rackNumber: 'D2', stockStatus: 'high', supplier: 'Apollo MedSource' },
-            { name: 'Azithromycin', category: 'Antibiotic', batchNumber: 'AZI-001', expiryDate: new Date('2025-11-20'), quantity: 60, reorderLevel: 30, purchasePrice: 40, sellingPrice: 85, rackNumber: 'E2', stockStatus: 'medium', supplier: 'MedSupply India' }
+            { name: 'Aspirin', category: 'Analgesic', batches: [{ batchNumber: 'ASP-001', expiryDate: new Date('2025-12-31'), quantity: 500, rackNumber: 'A1' }], quantity: 500, reorderLevel: 100, purchasePrice: 5, sellingPrice: 10, stockStatus: 'high', supplier: 'MedSupply India' },
+            { name: 'Amoxicillin', category: 'Antibiotic', batches: [{ batchNumber: 'AMX-001', expiryDate: new Date('2026-06-30'), quantity: 45, rackNumber: 'B2' }], quantity: 45, reorderLevel: 100, purchasePrice: 15, sellingPrice: 30, stockStatus: 'low', supplier: 'MedSupply India' },
+            { name: 'Paracetamol', category: 'Analgesic', batches: [{ batchNumber: 'PAR-001', expiryDate: new Date('2025-08-15'), quantity: 200, rackNumber: 'A2' }], quantity: 200, reorderLevel: 80, purchasePrice: 2, sellingPrice: 5, stockStatus: 'high', supplier: 'HealthCare Solutions' },
+            { name: 'Omeprazole', category: 'Antacid', batches: [{ batchNumber: 'OMP-001', expiryDate: new Date('2026-02-10'), quantity: 80, rackNumber: 'C1' }], quantity: 80, reorderLevel: 100, purchasePrice: 8, sellingPrice: 18, stockStatus: 'medium', supplier: 'PharmaHub Distributors' },
+            { name: 'Cough Syrup', category: 'Cough Suppressant', batches: [{ batchNumber: 'CS-001', expiryDate: new Date('2025-05-20'), quantity: 120, rackNumber: 'D1' }], quantity: 120, reorderLevel: 50, purchasePrice: 12, sellingPrice: 25, stockStatus: 'high', supplier: 'HealthCare Solutions' },
+            { name: 'Ibuprofen', category: 'Anti-inflammatory', batches: [{ batchNumber: 'IBU-001', expiryDate: new Date('2026-11-30'), quantity: 30, rackNumber: 'A3' }], quantity: 30, reorderLevel: 100, purchasePrice: 6, sellingPrice: 12, stockStatus: 'low', supplier: 'MedSupply India' },
+            { name: 'Vitamin C', category: 'Vitamin', batches: [{ batchNumber: 'VIT-001', expiryDate: new Date('2027-01-31'), quantity: 300, rackNumber: 'E1' }], quantity: 300, reorderLevel: 100, purchasePrice: 3, sellingPrice: 8, stockStatus: 'high', supplier: 'PharmaHub Distributors' },
+            { name: 'Antibiotic Cream', category: 'Topical', batches: [{ batchNumber: 'AC-001', expiryDate: new Date('2026-03-25'), quantity: 40, rackNumber: 'F1' }], quantity: 40, reorderLevel: 50, purchasePrice: 20, sellingPrice: 45, stockStatus: 'low', supplier: 'PharmaHub Distributors' },
+            { name: 'Cetirizine', category: 'Antihistamine', batches: [{ batchNumber: 'CET-001', expiryDate: new Date('2026-08-15'), quantity: 150, rackNumber: 'B1' }], quantity: 150, reorderLevel: 50, purchasePrice: 4, sellingPrice: 10, stockStatus: 'high', supplier: 'HealthCare Solutions' },
+            { name: 'Metformin', category: 'Antidiabetic', batches: [{ batchNumber: 'MET-001', expiryDate: new Date('2027-04-10'), quantity: 500, rackNumber: 'C2' }], quantity: 500, reorderLevel: 100, purchasePrice: 15, sellingPrice: 35, stockStatus: 'high', supplier: 'Apollo MedSource' },
+            { name: 'Amlodipine', category: 'Antihypertensive', batches: [{ batchNumber: 'AML-001', expiryDate: new Date('2026-10-05'), quantity: 250, rackNumber: 'D2' }], quantity: 250, reorderLevel: 80, purchasePrice: 12, sellingPrice: 28, stockStatus: 'high', supplier: 'Apollo MedSource' },
+            { name: 'Azithromycin', category: 'Antibiotic', batches: [{ batchNumber: 'AZI-001', expiryDate: new Date('2025-11-20'), quantity: 60, rackNumber: 'E2' }], quantity: 60, reorderLevel: 30, purchasePrice: 40, sellingPrice: 85, stockStatus: 'medium', supplier: 'MedSupply India' }
         ];
 
         const mappedMedicines = medicineData.map(m => ({
             ...m,
-            category: categoryMap[m.category] || null,
             supplier: supplierMap[m.supplier] ? String(supplierMap[m.supplier]) : m.supplier
         }));
         const medicines = await Medicine.insertMany(mappedMedicines);
-        console.log(`✓ ${medicines.length} Medicines seeded`);
+        console.log(`✓ ${medicines.length} Medicines seeded (via embedded Batches)`);
 
-        // ── 6. SEED ANALYTICS (Bills & InventoryHistory) ───────────────────
+        // ── 5. SEED ANALYTICS (Bills & InventoryHistory) ───────────────────
         const bills = [];
         const historyRecords = [];
         for (let daysAgo = 29; daysAgo >= 0; daysAgo--) {
@@ -153,7 +134,7 @@ const seedDatabase = async () => {
                 const items = pickedMeds.map((m) => {
                     const quantity = rand(1, 6);
                     const price = m.sellingPrice;
-                    return { medicineId: m._id, name: m.name, batchNumber: m.batchNumber, quantity, price, total: Math.round(price * quantity * 100) / 100 };
+                    return { medicineId: m._id, name: m.name, quantity, price, total: Math.round(price * quantity * 100) / 100 };
                 });
 
                 const subtotal = items.reduce((s, i) => s + i.total, 0);
@@ -199,13 +180,13 @@ const seedDatabase = async () => {
         }
         console.log('✓ Customers Analytics synced natively');
 
-        // ── 7. SEED EXCEPTIONAL ACTIVITIES (Purchase Orders, Alerts, Reorders)
-
-        // 7a. Purchase Orders
+        // ── 6. SEED EXCEPTIONAL ACTIVITIES (Purchase Orders, Alerts, Reorders)
+        
         const purchaseOrders = [];
+        // Normal Purchase Orders
         for (let i = 0; i < 3; i++) {
             const med = medicines[i];
-            const supplierDoc = await Supplier.findById(med.supplier).catch(() => suppliers[0]); // fallback to first supplier if string match didn't resolve
+            const supplierDoc = await Supplier.findById(med.supplier).catch(() => suppliers[0]);
 
             purchaseOrders.push({
                 order_number: `PO-${rand(1000, 9999)}`,
@@ -221,16 +202,12 @@ const seedDatabase = async () => {
                 approved_by: owner._id
             });
         }
-        await PurchaseOrder.insertMany(purchaseOrders);
 
-        // 7b. Alerts and Reorder Suggestions
         const alerts = [];
-        const reorderSuggestions = [];
         const notifications = [];
         const lowStockMeds = medicines.filter(m => m.quantity <= m.reorderLevel);
 
         for (const med of lowStockMeds) {
-            // Document the alert
             const alertDoc = await Alert.create({
                 medicineId: med._id, medicineName: med.name,
                 alertType: 'low_stock',
@@ -239,7 +216,6 @@ const seedDatabase = async () => {
             });
             alerts.push(alertDoc);
 
-            // Document the notification
             notifications.push({
                 userId: owner._id, recipientType: 'email',
                 recipient: owner.email, subject: `Low Stock Alert: ${med.name}`,
@@ -247,21 +223,30 @@ const seedDatabase = async () => {
                 status: 'sent', createdAt: daysAgoDate(1)
             });
 
-            // Document the AI reorder logic equivalent
+            // Reorder suggestion is natively an AI Draft PurchaseOrder now
             const sup = suppliers.find(s => s._id.toString() === med.supplier) || suppliers[0];
-            reorderSuggestions.push({
-                medicine_id: med._id, medicine_name: med.name,
-                current_stock: med.quantity, reorder_level: med.reorderLevel,
-                suggested_quantity: med.reorderLevel * 2,
-                ai_demand_forecast: med.reorderLevel * 2.5,
-                suggested_suppliers: [{ supplier_id: sup._id, supplier_name: sup.supplier_name, delivery_score: sup.delivery_performance_score, estimated_price: med.purchasePrice }],
-                status: 'Pending', priority: alertDoc.severity === 'critical' ? 'High' : 'Medium'
+            purchaseOrders.push({
+                order_number: `PO-AI-${rand(1000, 9999)}`,
+                medicine_id: med._id,
+                medicine_name: med.name,
+                supplier_id: sup._id,
+                requested_quantity: med.reorderLevel * 2,
+                unit_price: med.purchasePrice,
+                total_amount: med.purchasePrice * (med.reorderLevel * 2),
+                order_status: 'AI_Draft',
+                expected_delivery_date: new Date(Date.now() + 86400000 * rand(5, 7)),
+                created_by: owner._id,
+                ai_forecast_reference: {
+                    demand_predicted: med.reorderLevel * 2.5,
+                    forecast_date: new Date(),
+                    priority: alertDoc.severity === 'critical' ? 'High' : 'Medium'
+                }
             });
         }
-        await ReorderSuggestion.insertMany(reorderSuggestions);
+        await PurchaseOrder.insertMany(purchaseOrders);
         await Notification.insertMany(notifications);
 
-        // 7c. Sub-Collections (Orders, Prescriptions, Reports, Uploads)
+        // Sub-Collections
         const sampleCustomer = customers[0];
         const prescription = await Prescription.create({
             customerId: sampleCustomer._id, customerName: sampleCustomer.name, customerPhone: sampleCustomer.phone,
@@ -275,7 +260,7 @@ const seedDatabase = async () => {
                 orderNumber: `ORD-${rand(1000, 9999)}`, customerId: sampleCustomer._id, customerName: sampleCustomer.name,
                 customerPhone: sampleCustomer.phone, orderType: 'delivery', deliveryAddress: sampleCustomer.address,
                 items: [{ medicineId: medicines[2]._id, medicineName: medicines[2].name, quantity: 2, price: medicines[2].sellingPrice, total: medicines[2].sellingPrice * 2 }],
-                prescriptionId: prescription._id, subtotal: medicines[2].sellingPrice * 2, grandTotal: (medicines[2].sellingPrice * 2) + 50, // subtotal + tax + delivery
+                prescriptionId: prescription._id, subtotal: medicines[2].sellingPrice * 2, grandTotal: (medicines[2].sellingPrice * 2) + 50,
                 paymentMethod: 'cod', paymentStatus: 'pending', orderStatus: 'placed', staffId: staffList[0]._id
             }
         ]);
@@ -286,18 +271,23 @@ const seedDatabase = async () => {
             generatedBy: owner._id
         });
 
-        await UploadLog.create({
-            fileName: 'monthly_inventory_sheet.xlsx', fileSize: 2048576,
-            recordsProcessed: 120, recordsSuccessful: 118, recordsFailed: 2,
-            anomalies: [{ row: 45, field: 'sellingPrice', issue: 'Invalid number format' }],
-            uploadedBy: owner._id, status: 'partial', createdAt: daysAgoDate(10)
+        console.log(`✓ Generated ${purchaseOrders.length} native PurchaseOrders (Regular + AI Drafts), ${alerts.length} Alerts`);
+        console.log(`✓ Generated custom user Orders, Prescriptions, Reports`);
+
+        // ── 7. SEED AUDIT LOGS ─────────────────────────────────────────────
+        const auditEntries = [];
+        
+        // Simulating the UploadLog we deleted using AuditLogs
+        auditEntries.push({
+            userId: owner._id, username: owner.username, action: 'EXCEL_UPLOAD', module: 'DataImport', 
+            details: {
+                fileName: 'monthly_inventory_sheet.xlsx', fileSizeBytes: 2048576,
+                totalRecords: 120, recordsSuccessful: 118, recordsFailed: 2,
+                anomalies: [{ row: 45, field: 'sellingPrice', issue: 'Invalid number format' }]
+            },
+            ipAddress: ip(), httpMethod: 'POST', endpoint: '/api/uploads/excel', statusCode: 200, timestamp: daysAgoDate(10)
         });
 
-        console.log(`✓ Generated ${purchaseOrders.length} PurchaseOrders, ${alerts.length} Alerts, ${reorderSuggestions.length} Reorders`);
-        console.log(`✓ Generated custom user Orders, Prescriptions, Reports, and UploadLog entries`);
-
-        // ── 8. SEED AUDIT LOGS ─────────────────────────────────────────────
-        const auditEntries = [];
         for (let day = 29; day >= 0; day--) {
             auditEntries.push({
                 userId: owner._id, username: owner.username, action: 'USER_LOGIN', module: 'System', details: { role: 'owner' },
@@ -321,29 +311,10 @@ const seedDatabase = async () => {
         for (const med of medicines) {
             auditEntries.push({
                 userId: owner._id, username: owner.username, action: 'MEDICINE_CREATED', module: 'Inventory',
-                details: { name: med.name, category: typeof med.category === 'object' ? med.category.name : med.category, quantity: med.quantity },
+                details: { name: med.name, category: med.category, quantity: med.quantity },
                 ipAddress: ip(), httpMethod: 'POST', endpoint: 'SEED/api/inventory', statusCode: 201, timestamp: daysAgoDate(medDayOffset, rand(10, 18))
             });
             medDayOffset = Math.max(0, medDayOffset - 1);
-        }
-        let supDayOffset = 28;
-        for (const sup of suppliers) {
-            auditEntries.push({
-                userId: owner._id, username: owner.username, action: 'SUPPLIER_CREATED', module: 'Suppliers', details: { name: sup.supplier_name, contact: sup.contact_info?.phone || 'N/A' },
-                ipAddress: ip(), httpMethod: 'POST', endpoint: 'SEED/api/suppliers', statusCode: 201, timestamp: daysAgoDate(supDayOffset, rand(10, 18))
-            });
-            supDayOffset = Math.max(0, supDayOffset - 3);
-        }
-
-        for (let i = 0; i < 40; i++) {
-            const med = medicines[rand(0, medicines.length - 1)];
-            const from = rand(20, 200);
-            const to = from + rand(10, 100);
-            const updater = getStaff();
-            auditEntries.push({
-                userId: updater._id, username: updater.username, action: 'STOCK_UPDATE', module: 'Inventory', details: { medicine: med.name, from, to, change: to - from },
-                ipAddress: ip(), httpMethod: 'PUT', endpoint: `SEED/api/inventory/${med._id}/adjust`, statusCode: 200, timestamp: daysAgoDate(rand(0, 28))
-            });
         }
 
         await AuditLog.insertMany(auditEntries, { ordered: false });
@@ -351,11 +322,10 @@ const seedDatabase = async () => {
 
         console.log(`
       ╔═════════════════════════════════════════════════════════╗
-      ║    Master Database Seeding Completed Successfully!      ║
+      ║    Master Database Schema 2.0 Seeding Completed!        ║
       ╠═════════════════════════════════════════════════════════╣
       ║ Core Models                                             ║
       ║ ├─ Users              : ${users.length.toString().padEnd(30)}║
-      ║ ├─ Categories         : ${categoryDocs.length.toString().padEnd(30)}║
       ║ ├─ Suppliers          : ${suppliers.length.toString().padEnd(30)}║
       ║ ├─ Customers          : ${customers.length.toString().padEnd(30)}║
       ║ └─ Medicines          : ${medicines.length.toString().padEnd(30)}║
@@ -366,9 +336,9 @@ const seedDatabase = async () => {
       ║                                                         ║
       ║ Extensions                                              ║
       ║ ├─ PurchaseOrders     : ${purchaseOrders.length.toString().padEnd(30)}║
-      ║ ├─ Alerts / Reorders  : ${alerts.length.toString().padEnd(30)}║
+      ║ ├─ Alerts/Notifs      : ${alerts.length.toString().padEnd(30)}║
       ║ ├─ Orders / Prescrips : 1 / 1                         ║
-      ║ └─ Misc (Rep/Notif)   : generated                       ║
+      ║ └─ Misc (Reports)     : generated                       ║
       ╠═════════════════════════════════════════════════════════╣
       ║ Test Credentials:                                       ║
       ║ Owner: admin / admin123                                 ║

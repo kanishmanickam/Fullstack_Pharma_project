@@ -1,7 +1,7 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import app from '../server.js';
-import { Medicine, UploadLog, User, Category } from '../models/index.js';
+import { Medicine, AuditLog, User } from '../models/index.js';
 import jwt from 'jsonwebtoken';
 import XLSX from 'xlsx';
 import path from 'path';
@@ -76,6 +76,9 @@ describe('Integration Test: POST /api/uploads/excel', () => {
         XLSX.utils.book_append_sheet(anomalyWb, XLSX.utils.json_to_sheet(anomalyData), 'Data');
         anomalyFilePath = path.join(__dirname, 'anomaly_mock.xlsx');
         XLSX.writeFile(anomalyWb, anomalyFilePath);
+
+        await AuditLog.deleteMany({ userId: testUser._id });
+        await Medicine.deleteMany({ "batches.batchNumber": { $in: ['QA-BATCH-001', 'QA-BATCH-002'] } });
     });
 
     afterAll(async () => {
@@ -84,9 +87,8 @@ describe('Integration Test: POST /api/uploads/excel', () => {
         if (fs.existsSync(anomalyFilePath)) fs.unlinkSync(anomalyFilePath);
 
         // Wipe test data generated during these tests
-        await Medicine.deleteMany({ batchNumber: { $in: ['QA-BATCH-001', 'QA-BATCH-002'] } });
-        await Category.deleteMany({ name: { $in: ['Antibiotics', 'Painkillers'] } });
-        await UploadLog.deleteMany({ uploadedBy: testUser._id });
+        await Medicine.deleteMany({ "batches.batchNumber": { $in: ['QA-BATCH-001', 'QA-BATCH-002'] } });
+        await AuditLog.deleteMany({ userId: testUser._id });
         await User.findByIdAndDelete(testUser._id);
 
         await mongoose.connection.close();
@@ -108,7 +110,7 @@ describe('Integration Test: POST /api/uploads/excel', () => {
     });
 
 
-    it('Success Case: Should process valid Excel file, return 200 OK, and record UploadLog', async () => {
+    it('Success Case: Should process valid Excel file, return 200 OK, and record AuditLog', async () => {
         const res = await request(app)
             .post('/api/uploads/excel')
             .set('Authorization', `Bearer ${token}`)
@@ -118,25 +120,26 @@ describe('Integration Test: POST /api/uploads/excel', () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
 
-        // Verify UploadLog recorded the success appropriately
+        // Verify AuditLog natively recorded the success
         const logId = res.body.uploadLog._id;
-        const dbLog = await UploadLog.findById(logId);
+        const dbLog = await AuditLog.findById(logId);
 
         expect(dbLog).toBeTruthy();
-        expect(dbLog.recordsSuccessful).toBe(1);
-        expect(dbLog.status).toBe('success');
+        expect(dbLog.details.recordsSuccessful).toBe(1);
+        expect(dbLog.action).toBe('EXCEL_UPLOAD');
     });
 
 
     it('Validation Check: Should verify the data in MongoDB matches the Excel file exactly', async () => {
         // Re-query the DB for the medicine that was just created in the success case
-        const savedMedicine = await Medicine.findOne({ batchNumber: 'QA-BATCH-001' }).populate('category');
+        const savedMedicine = await Medicine.findOne({ "batches.batchNumber": 'QA-BATCH-001' });
 
         expect(savedMedicine).not.toBeNull();
         expect(savedMedicine.name).toBe('Amoxicillin 250mg');
         expect(savedMedicine.quantity).toBe(500);
         expect(savedMedicine.sellingPrice).toBe(15);
-        expect(savedMedicine.category.name).toBe('Antibiotics'); // Resolves ObjectId to dynamically created category
+        expect(savedMedicine.category).toBe('Antibiotics'); // String-based category directly mapping
+        expect(savedMedicine.batches[0].batchNumber).toBe('QA-BATCH-001');
     });
 
 
@@ -148,7 +151,7 @@ describe('Integration Test: POST /api/uploads/excel', () => {
 
         expect(res.status).toBe(200);
 
-        // Access the anomalies tracked by detectAnomalies inside the returned UploadLog
+        // Access the anomalies tracked by detectAnomalies inside the returned UploadLog mock
         const { anomalies } = res.body.uploadLog;
 
         expect(anomalies).toBeDefined();

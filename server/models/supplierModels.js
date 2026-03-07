@@ -41,12 +41,7 @@ const supplierSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    medicine_categories: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-      },
-    ],
+    medicine_categories: [{ type: String }],
     registration_date: {
       type: Date,
       default: Date.now,
@@ -94,7 +89,7 @@ const purchaseOrderSchema = new mongoose.Schema(
     },
     order_status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Ordered', 'Shipped', 'Received', 'Cancelled'],
+      enum: ['AI_Draft', 'Pending', 'Approved', 'Ordered', 'Shipped', 'Received', 'Cancelled'],
       default: 'Pending',
     },
     expected_delivery_date: {
@@ -116,68 +111,17 @@ const purchaseOrderSchema = new mongoose.Schema(
     ai_forecast_reference: {
       demand_predicted: Number,
       forecast_date: Date,
+      priority: {
+        type: String,
+        enum: ['Low', 'Medium', 'High', 'Critical'],
+        default: 'Medium'
+      }
     },
-  },
-  { timestamps: true }
-);
-
-// Reorder Suggestion Schema
-const reorderSuggestionSchema = new mongoose.Schema(
-  {
-    medicine_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Medicine',
-      required: true,
-    },
-    medicine_name: String,
-    current_stock: {
-      type: Number,
-      required: true,
-    },
-    reorder_level: {
-      type: Number,
-      required: true,
-    },
-    suggested_quantity: {
-      type: Number,
-      required: true,
-    },
-    ai_demand_forecast: {
-      type: Number,
-      required: true,
-    },
-    suggested_suppliers: [
-      {
-        supplier_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Supplier',
-        },
-        supplier_name: String,
-        delivery_score: Number,
-        estimated_price: Number,
-      },
-    ],
-    status: {
-      type: String,
-      enum: ['Pending', 'Approved', 'Ordered', 'Rejected'],
-      default: 'Pending',
-    },
-    priority: {
-      type: String,
-      enum: ['Low', 'Medium', 'High', 'Critical'],
-      default: 'Medium',
-    },
-    reviewed_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    reviewed_at: Date,
   },
   { timestamps: true }
 );
 
 const Supplier = mongoose.models.Supplier || mongoose.model('Supplier', supplierSchema);
 const PurchaseOrder = mongoose.models.PurchaseOrder || mongoose.model('PurchaseOrder', purchaseOrderSchema);
-const ReorderSuggestion = mongoose.models.ReorderSuggestion || mongoose.model('ReorderSuggestion', reorderSuggestionSchema);
 
-export { Supplier, PurchaseOrder, ReorderSuggestion };
+export { Supplier, PurchaseOrder };

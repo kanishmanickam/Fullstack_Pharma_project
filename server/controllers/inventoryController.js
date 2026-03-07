@@ -1,8 +1,7 @@
 import {
   Medicine,
   InventoryHistory,
-  Alert,
-  Category,
+  AuditLog
 } from '../models/index.js';
 import {
   sortByFEFO,
@@ -15,18 +14,22 @@ import log from '../utils/logger.js';
 // Get all medicines
 export const getAllMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find().populate('category', 'name').lean();
-    const sortedMedicines = sortByFEFO(medicines);
+    const medicines = await Medicine.find().lean();
 
-    const formattedMedicines = sortedMedicines.map(m => ({
-      ...m,
-      category: m.category?.name || 'Unknown'
-    }));
+    // Add virtual earliest expiry for sorting
+    const processedMedicines = medicines.map(m => {
+      let earliestExpiry = m.batches && m.batches.length > 0
+        ? new Date(Math.min(...m.batches.map(b => new Date(b.expiryDate))))
+        : new Date(9999, 11, 31);
+      return { ...m, expiryDate: earliestExpiry };
+    });
+
+    const sortedMedicines = sortByFEFO(processedMedicines);
 
     res.status(200).json({
       success: true,
-      count: formattedMedicines.length,
-      medicines: formattedMedicines,
+      count: sortedMedicines.length,
+      medicines: sortedMedicines,
     });
   } catch (error) {
     log('ERROR', 'Get all medicines error', { error: error.message });
@@ -41,7 +44,7 @@ export const getAllMedicines = async (req, res) => {
 // Get single medicine
 export const getMedicine = async (req, res) => {
   try {
-    const medicine = await Medicine.findById(req.params.id).populate('category', 'name').lean();
+    const medicine = await Medicine.findById(req.params.id).lean();
 
     if (!medicine) {
       return res.status(404).json({
@@ -49,8 +52,6 @@ export const getMedicine = async (req, res) => {
         message: 'Medicine not found',
       });
     }
-
-    medicine.category = medicine.category?.name || 'Unknown';
 
     res.status(200).json({
       success: true,
@@ -66,20 +67,12 @@ export const getMedicine = async (req, res) => {
   }
 };
 
-// Create medicine
+// Create medicine (or add batch if exists)
 export const createMedicine = async (req, res) => {
   try {
     const {
-      name,
-      category,
-      batchNumber,
-      expiryDate,
-      quantity,
-      purchasePrice,
-      sellingPrice,
-      rackNumber,
-      reorderLevel,
-      supplier,
+      name, category, batchNumber, expiryDate, quantity,
+      purchasePrice, sellingPrice, rackNumber, reorderLevel, supplier
     } = req.body;
 
     if (!name || !category || !batchNumber || !expiryDate || !purchasePrice || !sellingPrice || !rackNumber) {
@@ -89,37 +82,50 @@ export const createMedicine = async (req, res) => {
       });
     }
 
-    const stockStatus = getStockStatus(quantity, reorderLevel || 50);
+    const numQuantity = Number(quantity) || 0;
+    const existingMedicine = await Medicine.findOne({ name });
 
-    // Dynamic Category validation and mapping
-    const categoryDoc = await Category.findOne({ name: category });
-    if (!categoryDoc) {
-      return res.status(400).json({
-        success: false,
-        message: `Category '${category}' not found or unregistered.`,
+    let returnedMedicine;
+
+    if (existingMedicine) {
+      // Check if batch already exists
+      const existingBatch = existingMedicine.batches.find(b => b.batchNumber === batchNumber);
+      if (existingBatch) {
+        existingBatch.quantity += numQuantity;
+        existingBatch.expiryDate = expiryDate;
+        existingBatch.rackNumber = rackNumber;
+      } else {
+        existingMedicine.batches.push({
+          batchNumber, expiryDate, quantity: numQuantity, rackNumber
+        });
+      }
+
+      existingMedicine.quantity += numQuantity;
+      existingMedicine.stockStatus = getStockStatus(existingMedicine.quantity, existingMedicine.reorderLevel);
+      await existingMedicine.save();
+      returnedMedicine = existingMedicine;
+    } else {
+      returnedMedicine = await Medicine.create({
+        name,
+        category,
+        quantity: numQuantity,
+        purchasePrice,
+        sellingPrice,
+        reorderLevel: reorderLevel || 50,
+        stockStatus: getStockStatus(numQuantity, reorderLevel || 50),
+        supplier: supplier || 'Default Supplier',
+        batches: [{
+          batchNumber, expiryDate, quantity: numQuantity, rackNumber
+        }]
       });
     }
 
-    const medicine = await Medicine.create({
-      name,
-      category: categoryDoc._id,
-      batchNumber,
-      expiryDate,
-      quantity,
-      purchasePrice,
-      sellingPrice,
-      rackNumber,
-      reorderLevel: reorderLevel || 50,
-      stockStatus,
-      supplier: supplier || 'Default Supplier',
-    });
-
-    log('INFO', 'Medicine created', { medicineId: medicine._id, name });
+    log('INFO', 'Medicine created/updated', { medicineId: returnedMedicine._id, name });
 
     res.status(201).json({
       success: true,
-      message: 'Medicine created successfully',
-      medicine,
+      message: 'Medicine record stored successfully',
+      medicine: returnedMedicine,
     });
   } catch (error) {
     log('ERROR', 'Create medicine error', { error: error.message });
@@ -131,23 +137,14 @@ export const createMedicine = async (req, res) => {
   }
 };
 
-// Update medicine
+// Update medicine (Updates parent properties)
 export const updateMedicine = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Map Category string to explicit ObjectId if updating it
-    if (updates.category) {
-      const categoryDoc = await Category.findOne({ name: updates.category });
-      if (!categoryDoc) {
-        return res.status(400).json({
-          success: false,
-          message: `Category '${updates.category}' not found or unregistered.`,
-        });
-      }
-      updates.category = categoryDoc._id;
-    }
+    // Remove immutable or deeply nested arrays from simple update payload
+    delete updates.batches;
 
     const medicine = await Medicine.findByIdAndUpdate(
       id,
@@ -162,22 +159,17 @@ export const updateMedicine = async (req, res) => {
       });
     }
 
-    // Update stock status if quantity changed
-    if (updates.quantity !== undefined) {
+    if (updates.quantity !== undefined || updates.reorderLevel !== undefined) {
       medicine.stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
       await medicine.save();
     }
-
-    await medicine.populate('category', 'name');
-    const returnedMedicine = medicine.toObject();
-    returnedMedicine.category = returnedMedicine.category?.name || 'Unknown';
 
     log('INFO', 'Medicine updated', { medicineId: id });
 
     res.status(200).json({
       success: true,
       message: 'Medicine updated successfully',
-      medicine: returnedMedicine,
+      medicine,
     });
   } catch (error) {
     log('ERROR', 'Update medicine error', { error: error.message });
@@ -193,7 +185,6 @@ export const updateMedicine = async (req, res) => {
 export const deleteMedicine = async (req, res) => {
   try {
     const { id } = req.params;
-
     const medicine = await Medicine.findByIdAndDelete(id);
 
     if (!medicine) {
@@ -204,7 +195,6 @@ export const deleteMedicine = async (req, res) => {
     }
 
     log('INFO', 'Medicine deleted', { medicineId: id });
-
     res.status(200).json({
       success: true,
       message: 'Medicine deleted successfully',
@@ -231,26 +221,18 @@ export const searchMedicines = async (req, res) => {
       });
     }
 
-    const categories = await Category.find({ name: { $regex: query, $options: 'i' } });
-    const categoryIds = categories.map(c => c._id);
-
     const medicines = await Medicine.find({
       $or: [
         { name: { $regex: query, $options: 'i' } },
-        { category: { $in: categoryIds } },
-        { batchNumber: { $regex: query, $options: 'i' } },
+        { category: { $regex: query, $options: 'i' } },
+        { "batches.batchNumber": { $regex: query, $options: 'i' } },
       ],
-    }).populate('category', 'name').lean();
-
-    const formattedMedicines = medicines.map(m => ({
-      ...m,
-      category: m.category?.name || 'Unknown'
-    }));
+    }).lean();
 
     res.status(200).json({
       success: true,
-      count: formattedMedicines.length,
-      medicines: sortByFEFO(formattedMedicines),
+      count: medicines.length,
+      medicines
     });
   } catch (error) {
     log('ERROR', 'Search medicines error', { error: error.message });
@@ -267,12 +249,12 @@ export const getLowStockMedicines = async (req, res) => {
   try {
     const medicines = await Medicine.find({
       $expr: { $lte: ['$quantity', '$reorderLevel'] },
-    });
+    }).lean();
 
     res.status(200).json({
       success: true,
       count: medicines.length,
-      medicines: sortByFEFO(medicines),
+      medicines,
     });
   } catch (error) {
     log('ERROR', 'Get low stock medicines error', { error: error.message });
@@ -284,16 +266,20 @@ export const getLowStockMedicines = async (req, res) => {
   }
 };
 
-// Get near expiry medicines (within 7 days)
+// Get near expiry medicines 
 export const getNearExpiryMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find();
-    const nearExpiryMedicines = medicines.filter(m => isNearExpiry(m.expiryDate, 7));
+    const medicines = await Medicine.find().lean();
+
+    const nearExpiryMedicines = medicines.filter(m => {
+      if (!m.batches || m.batches.length === 0) return false;
+      return m.batches.some(b => isNearExpiry(b.expiryDate, 7));
+    });
 
     res.status(200).json({
       success: true,
       count: nearExpiryMedicines.length,
-      medicines: sortByFEFO(nearExpiryMedicines),
+      medicines: nearExpiryMedicines,
     });
   } catch (error) {
     log('ERROR', 'Get near expiry medicines error', { error: error.message });
@@ -308,8 +294,12 @@ export const getNearExpiryMedicines = async (req, res) => {
 // Get expired medicines
 export const getExpiredMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find();
-    const expiredMedicines = medicines.filter(m => isExpired(m.expiryDate));
+    const medicines = await Medicine.find().lean();
+
+    const expiredMedicines = medicines.filter(m => {
+      if (!m.batches || m.batches.length === 0) return false;
+      return m.batches.some(b => isExpired(b.expiryDate));
+    });
 
     res.status(200).json({
       success: true,
@@ -326,7 +316,7 @@ export const getExpiredMedicines = async (req, res) => {
   }
 };
 
-// Adjust medicine quantity
+// Adjust medicine quantity via FEFO
 export const adjustQuantity = async (req, res) => {
   try {
     const { id } = req.params;
@@ -349,31 +339,55 @@ export const adjustQuantity = async (req, res) => {
     }
 
     const previousQuantity = medicine.quantity;
-    medicine.quantity += quantityChanged;
+    const numChanged = Number(quantityChanged);
 
-    if (medicine.quantity < 0) {
+    // Validate we don't go below zero
+    if (medicine.quantity + numChanged < 0) {
       return res.status(400).json({
         success: false,
         message: 'Insufficient quantity',
       });
     }
 
+    if (numChanged < 0) {
+      // Deduct from batches using FEFO
+      let remainingToDeduct = Math.abs(numChanged);
+
+      // Sort batches ascending by expiry (oldest first)
+      medicine.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+      for (let batch of medicine.batches) {
+        if (remainingToDeduct === 0) break;
+        if (batch.quantity > 0) {
+          const deduction = Math.min(batch.quantity, remainingToDeduct);
+          batch.quantity -= deduction;
+          remainingToDeduct -= deduction;
+        }
+      }
+    } else {
+      // Add quantity to the newest batch
+      medicine.batches.sort((a, b) => new Date(b.expiryDate) - new Date(a.expiryDate));
+      if (medicine.batches.length > 0) {
+        medicine.batches[0].quantity += numChanged;
+      }
+    }
+
+    medicine.quantity += numChanged;
     medicine.stockStatus = getStockStatus(medicine.quantity, medicine.reorderLevel);
     await medicine.save();
 
-    // Log the adjustment
     await InventoryHistory.create({
       medicineId: id,
       medicineName: medicine.name,
       action: 'adjustment',
-      quantityChanged,
+      quantityChanged: numChanged,
       previousQuantity,
       newQuantity: medicine.quantity,
       reason,
       performedBy: req.user.id,
     });
 
-    log('INFO', 'Inventory adjusted', { medicineId: id, quantityChanged });
+    log('INFO', 'Inventory adjusted via FEFO', { medicineId: id, quantityChanged: numChanged });
 
     res.status(200).json({
       success: true,
@@ -419,7 +433,7 @@ export const getInventoryHistory = async (req, res) => {
   }
 };
 
-// Get inventory intelligence (fast/slow moving, critical, recommendations)
+// Get inventory intelligence
 export const getInventoryIntelligence = async (req, res) => {
   try {
     const medicines = await Medicine.find();
@@ -487,4 +501,3 @@ export const getInventoryIntelligence = async (req, res) => {
     });
   }
 };
-

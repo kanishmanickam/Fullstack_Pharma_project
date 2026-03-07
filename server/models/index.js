@@ -64,28 +64,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 const User = mongoose.model('User', userSchema);
 
-// ============ CATEGORY SCHEMA ============
-const categorySchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    isApproved: {
-      type: Boolean,
-      default: true,
-    },
-  },
-  { timestamps: true }
-);
 
-const Category = mongoose.model('Category', categorySchema);
 
 // ============ MEDICINE SCHEMA ============
 const medicineSchema = new mongoose.Schema(
@@ -96,16 +75,7 @@ const medicineSchema = new mongoose.Schema(
       trim: true,
     },
     category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
-      required: true,
-    },
-    batchNumber: {
       type: String,
-      required: true,
-    },
-    expiryDate: {
-      type: Date,
       required: true,
     },
     quantity: {
@@ -113,6 +83,14 @@ const medicineSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    batches: [
+      {
+        batchNumber: { type: String, required: true },
+        expiryDate: { type: Date, required: true },
+        quantity: { type: Number, required: true, default: 0 },
+        rackNumber: { type: String, required: true },
+      }
+    ],
     reorderLevel: {
       type: Number,
       default: 50,
@@ -123,10 +101,6 @@ const medicineSchema = new mongoose.Schema(
     },
     sellingPrice: {
       type: Number,
-      required: true,
-    },
-    rackNumber: {
-      type: String,
       required: true,
     },
     stockStatus: {
@@ -342,39 +316,7 @@ const inventoryHistorySchema = new mongoose.Schema(
 
 const InventoryHistory = mongoose.model('InventoryHistory', inventoryHistorySchema);
 
-// ============ UPLOAD LOG SCHEMA ============
-const uploadLogSchema = new mongoose.Schema(
-  {
-    fileName: String,
-    fileSize: Number,
-    recordsProcessed: Number,
-    recordsSuccessful: Number,
-    recordsFailed: Number,
-    anomalies: [
-      {
-        row: Number,
-        field: String,
-        issue: String,
-      },
-    ],
-    uploadedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    status: {
-      type: String,
-      enum: ['success', 'partial', 'failed'],
-      default: 'success',
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: true }
-);
 
-const UploadLog = mongoose.model('UploadLog', uploadLogSchema);
 
 // ============ REPORT SCHEMA ============
 const reportSchema = new mongoose.Schema(
@@ -687,102 +629,18 @@ auditLogSchema.index({ module: 1, timestamp: -1 });
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
-// ============ FORECAST PARAMETERS SCHEMA ============
-const forecastParametersSchema = new mongoose.Schema(
-  {
-    forecastHorizon: {
-      type: Number,
-      default: 4, // 4 weeks
-    },
-    leadTimeDays: {
-      type: Number,
-      default: 7,
-    },
-    safetyStockPercent: {
-      type: Number,
-      default: 20,
-    },
-    seasonalMultipliers: {
-      jan: { type: Number, default: 1.0 },
-      feb: { type: Number, default: 1.0 },
-      mar: { type: Number, default: 1.1 },
-      apr: { type: Number, default: 1.2 },
-      may: { type: Number, default: 1.2 },
-      jun: { type: Number, default: 1.1 },
-      jul: { type: Number, default: 1.3 }, // Monsoon/Malaria season
-      aug: { type: Number, default: 1.3 },
-      sep: { type: Number, default: 1.2 },
-      oct: { type: Number, default: 1.4 }, // Flu/Allergy season
-      nov: { type: Number, default: 1.4 },
-      dec: { type: Number, default: 1.2 },
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-  },
-  { timestamps: true }
-);
 
-const ForecastParameters = mongoose.model('ForecastParameters', forecastParametersSchema);
-
-// ============ FORECAST RECOMMENDATION SCHEMA ============
-const forecastRecommendationSchema = new mongoose.Schema(
-  {
-    medicineId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Medicine',
-      required: true,
-    },
-    medicineName: String,
-    category: String,
-    currentStock: Number,
-    predictedDemand: Number,
-    optimalReorderQty: Number,
-    restockingDate: Date,
-    priority: {
-      type: String,
-      enum: ['low', 'medium', 'high', 'critical'],
-      default: 'medium',
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'adjusted', 'rejected'],
-      default: 'pending',
-    },
-    seasonalFactor: {
-      type: Number,
-      default: 1.0,
-    },
-    approvedQty: Number,
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    runDate: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: true }
-);
-
-const ForecastRecommendation = mongoose.model('ForecastRecommendation', forecastRecommendationSchema);
 
 export {
   User,
-  Category,
   Medicine,
   Customer,
   Bill,
   Alert,
   InventoryHistory,
-  UploadLog,
   Report,
   Notification,
   Prescription,
   Order,
-  ForecastParameters,
-  ForecastRecommendation,
   AuditLog,
 };

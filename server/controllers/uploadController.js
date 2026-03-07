@@ -2,10 +2,9 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Medicine, UploadLog, Category } from '../models/index.js';
+import { Medicine, AuditLog } from '../models/index.js';
 import { detectAnomalies } from '../utils/helpers.js';
 import log from '../utils/logger.js';
-import { createAuditEntry } from '../middleware/auditLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,45 +35,46 @@ export const uploadExcel = async (req, res) => {
     // Process records
     for (const row of data) {
       try {
-        // --- Dynamic Category Handling ---
-        let categoryDoc = await Category.findOne({ name: row.category });
-        if (!categoryDoc) {
-          categoryDoc = await Category.create({
-            name: row.category,
-            description: 'Imported via Excel upload',
-            isApproved: false
-          });
-          anomalies.push({
-            row: row.__rowNum__ || 'N/A',
-            issue: `Unregistered Category detected: '${row.category}'. Added as Pending for Admin approval.`,
-            type: 'warning'
-          });
-        }
+        const categoryString = row.category || 'Uncategorized';
 
-        // Check if medicine already exists
+        // Check if medicine already exists based on parent name
         const existingMedicine = await Medicine.findOne({
           name: row.name,
-          batchNumber: row.batchNumber,
         });
 
         if (existingMedicine) {
-          // Update existing
+          // Check if batch exists inside parent
+          const existingBatch = existingMedicine.batches.find(b => b.batchNumber === String(row.batchNumber));
+          if (existingBatch) {
+            existingBatch.quantity += parseInt(row.quantity) || 0;
+            existingBatch.expiryDate = row.expiryDate;
+            existingBatch.rackNumber = row.rackNumber || existingBatch.rackNumber;
+          } else {
+            existingMedicine.batches.push({
+              batchNumber: String(row.batchNumber),
+              expiryDate: row.expiryDate,
+              quantity: parseInt(row.quantity) || 0,
+              rackNumber: row.rackNumber || 'N/A'
+            });
+          }
+          // Update total quantity
           existingMedicine.quantity += parseInt(row.quantity) || 0;
-          existingMedicine.category = categoryDoc._id; // Ensure it uses relation
           await existingMedicine.save();
         } else {
-          // Create new
+          // Create new parent drug with first batch
           await Medicine.create({
             name: row.name,
-            category: categoryDoc._id,
-            batchNumber: row.batchNumber,
-            expiryDate: row.expiryDate,
-            quantity: row.quantity,
+            category: categoryString,
+            quantity: parseInt(row.quantity) || 0,
+            reorderLevel: row.reorderLevel || 50,
             purchasePrice: row.purchasePrice,
             sellingPrice: row.sellingPrice,
-            rackNumber: row.rackNumber,
-            reorderLevel: row.reorderLevel || 50,
-            supplier: row.supplier || 'Default',
+            batches: [{
+              batchNumber: String(row.batchNumber),
+              expiryDate: row.expiryDate,
+              quantity: parseInt(row.quantity) || 0,
+              rackNumber: row.rackNumber || 'N/A'
+            }]
           });
         }
         recordsSuccessful++;
@@ -84,25 +84,8 @@ export const uploadExcel = async (req, res) => {
       }
     }
 
-    // Log upload
-    const uploadLog = await UploadLog.create({
-      fileName: req.file.originalname,
-      fileSize: req.file.size,
-      recordsProcessed: data.length,
-      recordsSuccessful,
-      recordsFailed,
-      anomalies,
-      uploadedBy: req.user.id,
-      status: recordsFailed === 0 ? 'success' : 'partial',
-    });
-
-    // Clean up file
-    fs.unlinkSync(filePath);
-
-    // ── Explicit audit hook: captures file name + record counts ──
-    // Must be called explicitly (not by global middleware) because we
-    // need fine-grained details: fileName, success/fail counts, anomalies
-    createAuditEntry({
+    // Log upload directly to AuditLog (replacing UploadLog)
+    const auditRecord = await AuditLog.create({
       userId: req.user?.id,
       username: req.user?.username,
       action: 'EXCEL_UPLOAD',
@@ -113,14 +96,16 @@ export const uploadExcel = async (req, res) => {
         totalRecords: data.length,
         recordsSuccessful,
         recordsFailed,
-        anomalyCount: anomalies.length,
-        uploadLogId: uploadLog._id,
+        anomalies,
       },
       ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown',
       httpMethod: 'POST',
       endpoint: req.path,
       statusCode: 200,
-    }); // fire-and-forget — intentionally not awaited
+    });
+
+    // Clean up file
+    fs.unlinkSync(filePath);
 
     log('INFO', 'Excel file uploaded and processed', {
       fileName: req.file.originalname,
@@ -128,10 +113,22 @@ export const uploadExcel = async (req, res) => {
       recordsFailed,
     });
 
+    // Mock UploadLog shape for frontend/tests compatibility
+    const mockUploadLog = {
+      _id: auditRecord._id,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      recordsProcessed: data.length,
+      recordsSuccessful,
+      recordsFailed,
+      status: recordsFailed === 0 ? 'success' : 'partial',
+      anomalies
+    };
+
     res.status(200).json({
       success: true,
       message: 'File uploaded and processed successfully',
-      uploadLog,
+      uploadLog: mockUploadLog,
     });
   } catch (error) {
     log('ERROR', 'Upload Excel error', { error: error.message });
@@ -152,9 +149,21 @@ export const uploadExcel = async (req, res) => {
 // Get upload history
 export const getUploadHistory = async (req, res) => {
   try {
-    const uploadLogs = await UploadLog.find()
-      .populate('uploadedBy', 'username email')
-      .sort({ createdAt: -1 });
+    const auditLogs = await AuditLog.find({ action: 'EXCEL_UPLOAD' })
+      .populate('userId', 'username email')
+      .sort({ timestamp: -1 });
+
+    const uploadLogs = auditLogs.map(log => ({
+      _id: log._id,
+      fileName: log.details?.fileName || 'Unknown File',
+      fileSize: log.details?.fileSizeBytes || 0,
+      recordsProcessed: log.details?.totalRecords || 0,
+      recordsSuccessful: log.details?.recordsSuccessful || 0,
+      recordsFailed: log.details?.recordsFailed || 0,
+      uploadedBy: log.userId,
+      status: log.details?.recordsFailed === 0 ? 'success' : 'partial',
+      createdAt: log.timestamp
+    }));
 
     res.status(200).json({
       success: true,
@@ -174,17 +183,30 @@ export const getUploadHistory = async (req, res) => {
 // Get single upload log
 export const getUploadLog = async (req, res) => {
   try {
-    const uploadLog = await UploadLog.findById(req.params.id).populate(
-      'uploadedBy',
+    const auditLog = await AuditLog.findById(req.params.id).populate(
+      'userId',
       'username email'
     );
 
-    if (!uploadLog) {
+    if (!auditLog) {
       return res.status(404).json({
         success: false,
         message: 'Upload log not found',
       });
     }
+
+    const uploadLog = {
+      _id: auditLog._id,
+      fileName: auditLog.details?.fileName || 'Unknown File',
+      fileSize: auditLog.details?.fileSizeBytes || 0,
+      recordsProcessed: auditLog.details?.totalRecords || 0,
+      recordsSuccessful: auditLog.details?.recordsSuccessful || 0,
+      recordsFailed: auditLog.details?.recordsFailed || 0,
+      anomalies: auditLog.details?.anomalies || [],
+      uploadedBy: auditLog.userId,
+      status: auditLog.details?.recordsFailed === 0 ? 'success' : 'partial',
+      createdAt: auditLog.timestamp
+    };
 
     res.status(200).json({
       success: true,
@@ -205,19 +227,42 @@ export const exportExcel = async (req, res) => {
   try {
     const medicines = await Medicine.find().lean();
 
-    const rows = medicines.map(m => ({
-      name: m.name,
-      category: m.category,
-      batchNumber: m.batchNumber,
-      expiryDate: m.expiryDate,
-      quantity: m.quantity,
-      purchasePrice: m.purchasePrice,
-      sellingPrice: m.sellingPrice,
-      rackNumber: m.rackNumber,
-      reorderLevel: m.reorderLevel,
-      supplier: m.supplier,
-      stockStatus: m.stockStatus,
-    }));
+    // Flatten batches into rows for export
+    const rows = [];
+    medicines.forEach(m => {
+      // If there are no batches, just output the parent structure
+      if (!m.batches || m.batches.length === 0) {
+        rows.push({
+          name: m.name,
+          category: m.category,
+          batchNumber: 'N/A',
+          expiryDate: 'N/A',
+          quantity: m.quantity,
+          purchasePrice: m.purchasePrice,
+          sellingPrice: m.sellingPrice,
+          rackNumber: 'N/A',
+          reorderLevel: m.reorderLevel,
+          supplier: m.supplier || 'Default',
+          stockStatus: m.stockStatus || 'low',
+        });
+      } else {
+        m.batches.forEach(b => {
+          rows.push({
+            name: m.name,
+            category: m.category,
+            batchNumber: b.batchNumber,
+            expiryDate: b.expiryDate,
+            quantity: b.quantity, // Individual batch quantity
+            purchasePrice: m.purchasePrice,
+            sellingPrice: m.sellingPrice,
+            rackNumber: b.rackNumber,
+            reorderLevel: m.reorderLevel,
+            supplier: m.supplier || 'Default',
+            stockStatus: m.stockStatus || 'low',
+          });
+        });
+      }
+    });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -247,4 +292,3 @@ export const exportExcel = async (req, res) => {
     });
   }
 };
-

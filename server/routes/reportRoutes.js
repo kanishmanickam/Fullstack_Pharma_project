@@ -15,8 +15,8 @@ const router = express.Router();
 // Dashboard - All authenticated users
 router.get('/dashboard/summary', protect, getDashboardSummary);
 
-// Dashboard analytics - Owner only (contains financial data)
-router.get('/dashboard/analytics', protect, ownerOnly, getDashboardAnalytics);
+// Dashboard analytics - Returns role-specific data (financials for owner only)
+router.get('/dashboard/analytics', protect, getDashboardAnalytics);
 
 // Financial reports - Owner only
 router.get('/sales', protect, ownerOnly, getSalesReport);

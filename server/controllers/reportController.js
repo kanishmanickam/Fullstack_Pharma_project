@@ -262,6 +262,8 @@ export const getDashboardSummary = async (req, res) => {
 // ============================================================
 export const getDashboardAnalytics = async (req, res) => {
   try {
+    const isOwner = req.user?.role === 'owner';
+
     // ── Date windows ───────────────────────────────────────────
     const now = new Date();
     const thirtyDaysAgo = new Date(now);
@@ -271,116 +273,130 @@ export const getDashboardAnalytics = async (req, res) => {
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
 
-    // ── 1. 30-day Sales Trend (aggregation) ────────────────────
-    const salesTrendRaw = await Bill.aggregate([
-      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-          },
-          revenue: { $sum: '$grandTotal' },
-          billCount: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    let salesTrend = [];
+    let stockDistribution = [];
+    let forecastComparison = [];
+    let todayRevenue = 0;
+    let todayBillCount = 0;
 
-    // Fill in zero-revenue days so the chart is continuous
-    const salesTrend = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const key = d.toISOString().split('T')[0];
-      const found = salesTrendRaw.find((s) => s._id === key);
-      salesTrend.push({
-        date: key,
-        revenue: found ? Math.round(found.revenue * 100) / 100 : 0,
-        billCount: found ? found.billCount : 0,
+    if (isOwner) {
+      // ── 1. 30-day Sales Trend (aggregation) ────────────────────
+      const salesTrendRaw = await Bill.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            },
+            revenue: { $sum: '$grandTotal' },
+            billCount: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]);
+
+      // Fill in zero-revenue days so the chart is continuous
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        const found = salesTrendRaw.find((s) => s._id === key);
+        salesTrend.push({
+          date: key,
+          revenue: found ? Math.round(found.revenue * 100) / 100 : 0,
+          billCount: found ? found.billCount : 0,
+        });
+      }
+
+      // ── 2. Stock Distribution (fast / slow / normal) ───────────
+      const [medicinesRaw, allSalesHistory] = await Promise.all([
+        Medicine.find().lean(),
+        InventoryHistory.find({ action: 'sale' }).lean(),
+      ]);
+
+      // Compute total units sold per medicine using a pre-built lookup map
+      // (avoids the string/ObjectId mismatch of the shared classifyMovement helper)
+      const salesByMed = {};
+      allSalesHistory.forEach((h) => {
+        const id = h.medicineId ? h.medicineId.toString() : null;
+        if (id) salesByMed[id] = (salesByMed[id] || 0) + Math.abs(h.quantityChanged || 0);
       });
+
+      // Relative thresholds: rank medicines by their total sales, then split
+      // bottom 25% → slow, top 25% → fast, middle 50% → normal.
+      // This ensures all three slices always appear regardless of absolute volumes.
+      const totals = medicinesRaw.map((m) => salesByMed[m._id.toString()] || 0).sort((a, b) => a - b);
+      const p25 = totals[Math.floor(totals.length * 0.25)] ?? 0;
+      const p75 = totals[Math.floor(totals.length * 0.75)] ?? Infinity;
+
+      let fastMoving = 0;
+      let slowMoving = 0;
+      let normalMoving = 0;
+
+      medicinesRaw.forEach((med) => {
+        const sold = salesByMed[med._id.toString()] || 0;
+        if (sold >= p75) fastMoving++;
+        else if (sold <= p25) slowMoving++;
+        else normalMoving++;
+      });
+
+      stockDistribution = [
+        { name: 'Fast Moving', value: fastMoving, color: '#22c55e' },
+        { name: 'Slow Moving', value: slowMoving, color: '#f59e0b' },
+        { name: 'Normal', value: normalMoving, color: '#3b82f6' },
+      ];
+
+      // ── 3. Forecast vs Actual (last 7 days) ───────────────────
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+
+      const recentSales = await InventoryHistory.find({
+        action: 'sale',
+        createdAt: { $gte: sevenDaysAgo },
+      }).lean();
+
+      // Group actual sales by day (for both "actual" bars and forecast baseline)
+      const actualByDay = {};
+      recentSales.forEach((h) => {
+        const key = new Date(h.createdAt).toISOString().split('T')[0];
+        actualByDay[key] = (actualByDay[key] || 0) + Math.abs(h.quantityChanged || 0);
+      });
+
+      // Compute the avg DAILY total units (not avg per-record) for the forecast baseline.
+      // calculateDemandForecast divides by salesData.length (record count), not day count,
+      // so we compute the per-day average here and build the comparison array manually.
+      const dailyTotals = Object.values(actualByDay);
+      const avgDailyUnits = dailyTotals.length > 0
+        ? Math.round(dailyTotals.reduce((s, v) => s + v, 0) / dailyTotals.length)
+        : 0;
+
+      // Build forecast comparison: predicted = avgDaily ±20% jitter, actual = recorded
+      forecastComparison = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (6 - i));
+        const key = d.toISOString().split('T')[0];
+        const jitter = 0.85 + ((i * 37 + 13) % 31) / 100; // deterministic ±15% variation
+        return {
+          date: key,
+          predicted: Math.round(avgDailyUnits * jitter),
+          actual: actualByDay[key] || 0,
+        };
+      });
+
+      // ── 5. Today's Revenue KPI ────────────────────────────────
+      const todayBills = await Bill.find({ createdAt: { $gte: todayStart } }).lean();
+      todayRevenue = todayBills.reduce((sum, b) => sum + b.grandTotal, 0);
+      todayBillCount = todayBills.length;
     }
 
-    // ── 2. Stock Distribution (fast / slow / normal) ───────────
-    const [medicines, allSalesHistory] = await Promise.all([
-      Medicine.find().lean(),
-      InventoryHistory.find({ action: 'sale' }).lean(),
-    ]);
-
-    // Compute total units sold per medicine using a pre-built lookup map
-    // (avoids the string/ObjectId mismatch of the shared classifyMovement helper)
-    const salesByMed = {};
-    allSalesHistory.forEach((h) => {
-      const id = h.medicineId ? h.medicineId.toString() : null;
-      if (id) salesByMed[id] = (salesByMed[id] || 0) + Math.abs(h.quantityChanged || 0);
-    });
-
-    // Relative thresholds: rank medicines by their total sales, then split
-    // bottom 25% → slow, top 25% → fast, middle 50% → normal.
-    // This ensures all three slices always appear regardless of absolute volumes.
-    const totals = medicines.map((m) => salesByMed[m._id.toString()] || 0).sort((a, b) => a - b);
-    const p25 = totals[Math.floor(totals.length * 0.25)] ?? 0;
-    const p75 = totals[Math.floor(totals.length * 0.75)] ?? Infinity;
-
-    let fastMoving = 0;
-    let slowMoving = 0;
-    let normalMoving = 0;
-
-    medicines.forEach((med) => {
-      const sold = salesByMed[med._id.toString()] || 0;
-      if (sold >= p75) fastMoving++;
-      else if (sold <= p25) slowMoving++;
-      else normalMoving++;
-    });
-
-    const stockDistribution = [
-      { name: 'Fast Moving', value: fastMoving, color: '#22c55e' },
-      { name: 'Slow Moving', value: slowMoving, color: '#f59e0b' },
-      { name: 'Normal', value: normalMoving, color: '#3b82f6' },
-    ];
-
-    // ── 3. Forecast vs Actual (last 7 days) ───────────────────
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-
-    const recentSales = await InventoryHistory.find({
-      action: 'sale',
-      createdAt: { $gte: sevenDaysAgo },
-    }).lean();
-
-    // Group actual sales by day (for both "actual" bars and forecast baseline)
-    const actualByDay = {};
-    recentSales.forEach((h) => {
-      const key = new Date(h.createdAt).toISOString().split('T')[0];
-      actualByDay[key] = (actualByDay[key] || 0) + Math.abs(h.quantityChanged || 0);
-    });
-
-    // Compute the avg DAILY total units (not avg per-record) for the forecast baseline.
-    // calculateDemandForecast divides by salesData.length (record count), not day count,
-    // so we compute the per-day average here and build the comparison array manually.
-    const dailyTotals = Object.values(actualByDay);
-    const avgDailyUnits = dailyTotals.length > 0
-      ? Math.round(dailyTotals.reduce((s, v) => s + v, 0) / dailyTotals.length)
-      : 0;
-
-    // Build forecast comparison: predicted = avgDaily ±20% jitter, actual = recorded
-    const forecastComparison = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (6 - i));
-      const key = d.toISOString().split('T')[0];
-      const jitter = 0.85 + ((i * 37 + 13) % 31) / 100; // deterministic ±15% variation
-      return {
-        date: key,
-        predicted: Math.round(avgDailyUnits * jitter),
-        actual: actualByDay[key] || 0,
-      };
-    });
-
     // ── 4. Active Alerts Summary ─────────────────────────────
-    const [criticalAlerts, warningAlerts, lowStockMeds, nearExpiryMeds] = await Promise.all([
+    const allMedicines = await Medicine.find().select('name category quantity reorderLevel expiryDate _id').lean();
+    const lowStockMeds = allMedicines.filter((m) => m.quantity <= m.reorderLevel);
+    const nearExpiryMeds = allMedicines.filter((m) => isNearExpiry(m.expiryDate, 7));
+
+    const [criticalAlerts, warningAlerts] = await Promise.all([
       Alert.countDocuments({ severity: 'critical', isResolved: false }),
       Alert.countDocuments({ severity: 'warning', isResolved: false }),
-      Medicine.find({ $expr: { $lte: ['$quantity', '$reorderLevel'] } }).select('name quantity reorderLevel').lean(),
-      Medicine.find().lean().then((meds) => meds.filter((m) => isNearExpiry(m.expiryDate, 7))),
     ]);
 
     const alertSummary = {
@@ -389,28 +405,24 @@ export const getDashboardAnalytics = async (req, res) => {
       total: criticalAlerts + warningAlerts,
     };
 
-    // ── 5. Today's Revenue KPI ────────────────────────────────
-    const todayBills = await Bill.find({ createdAt: { $gte: todayStart } }).lean();
-    const todayRevenue = todayBills.reduce((sum, b) => sum + b.grandTotal, 0);
-
     // ── 6. Category list for filter dropdown ─────────────────
-    const categories = [...new Set(medicines.map((m) => m.category).filter(Boolean))].sort();
+    const categories = [...new Set(allMedicines.map((m) => m.category).filter(Boolean))].sort();
 
     log('INFO', 'Dashboard analytics fetched', {
-      salesTrendDays: salesTrend.length,
-      totalMedicines: medicines.length,
+      isOwner,
+      totalMedicines: allMedicines.length,
     });
 
     res.status(200).json({
       success: true,
       analytics: {
         kpis: {
-          totalMedicines: medicines.length,
+          totalMedicines: allMedicines.length,
           lowStockCount: lowStockMeds.length,
           nearExpiryCount: nearExpiryMeds.length,
           todayRevenue: Math.round(todayRevenue * 100) / 100,
           activeCriticalAlerts: criticalAlerts,
-          todayBillCount: todayBills.length,
+          todayBillCount: todayBillCount,
         },
         salesTrend,
         stockDistribution,

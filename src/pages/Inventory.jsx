@@ -28,6 +28,10 @@ const Inventory = () => {
 
   if (sortBy === 'fefo') {
     filteredMedicines = sortByFEFO(filteredMedicines);
+  } else if (sortBy === 'name') {
+    filteredMedicines = [...filteredMedicines].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
   }
 
   return (

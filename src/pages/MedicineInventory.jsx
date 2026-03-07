@@ -323,22 +323,11 @@ const MedicineInventory = () => {
         },
     ];
 
-    const rows = medicines.map((m) => {
-        return {
-            id: m._id,
-            medicineId: m.medicineId,
-            name: m.name,
-            category: m.category,
-            purchasePrice: m.purchasePrice,
-            unitPrice: m.unitPrice,
-            stockQuantity: m.stockQuantity,
-            rackNumber: m.rackNumber,
-            expiryDate: m.expiryDate,
-            supplierName: m.supplierId,
-            supplierId: m.supplierId,
-            _id: m._id
-        };
-    });
+    const rows = medicines.map((m) => ({
+        ...m,
+        id: m._id,
+        supplierName: m.supplierId, // DataGrid columns expect supplierName
+    }));
 
     // ── render ─────────────────────────────────────────────
     return (

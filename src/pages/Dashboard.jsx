@@ -22,7 +22,7 @@ import {
   FaBoxes,
   FaExclamationTriangle,
   FaClock,
-  FaTimesCircle,
+  FaUsers,
   FaRupeeSign,
   FaFileInvoice,
   FaChartLine,
@@ -33,6 +33,12 @@ import {
   FaSyncAlt,
   FaBell,
   FaList,
+  FaMoneyBillWave,
+  FaTachometerAlt,
+  FaUsersCog,
+  FaFileUpload,
+  FaTruck,
+  FaClipboardList
 } from 'react-icons/fa';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -546,52 +552,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ── Section 4: Navigation Hub ─────────────────────────────────── */}
-        <section>
-          <SectionHeader title="Quick Navigation" icon={<FaBoxes />} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <NavCard to="/medicine-inventory" icon={<FaPills />} label="Medicine Inventory" color="blue" />
-            <NavCard to="/billing" icon={<FaFileInvoice />} label="Billing" color="green" />
-            <NavCard to="/excel-upload" icon={<FaCloudUploadAlt />} label="Excel Import" color="purple" />
-            {isOwner && (
-              <>
-                <NavCard to="/stock-intelligence" icon={<FaBrain />} label="Stock Intelligence" color="orange" />
-                <NavCard to="/financial-reports" icon={<FaChartLine />} label="Financial Reports" color="indigo" />
-                <NavCard to="/ai/demand-setup" icon={<FaBrain />} label="AI Forecast Setup" color="purple" />
-              </>
-            )}
-            <NavCard to="/customers" icon={<FaBoxes />} label="Customers" color="teal" />
-            <NavCard to="/ai/forecast-review" icon={<FaChartLine />} label="Forecast Review" color="blue" />
-            {isOwner && (
-              <NavCard to="/activity-log" icon={<FaList />} label="Activity Log" color="red" />
-            )}
-
-          </div>
-        </section>
       </div>
     </Layout>
-  );
-}
-
-// ─── Navigation Card Component ───────────────────────────────────────────────
-const COLOR_MAP = {
-  blue: { bg: 'bg-blue-600 hover:bg-blue-700', icon: 'bg-blue-500' },
-  green: { bg: 'bg-emerald-600 hover:bg-emerald-700', icon: 'bg-emerald-500' },
-  purple: { bg: 'bg-purple-600 hover:bg-purple-700', icon: 'bg-purple-500' },
-  orange: { bg: 'bg-orange-500 hover:bg-orange-600', icon: 'bg-orange-400' },
-  indigo: { bg: 'bg-indigo-600 hover:bg-indigo-700', icon: 'bg-indigo-500' },
-  teal: { bg: 'bg-teal-600 hover:bg-teal-700', icon: 'bg-teal-500' },
-};
-
-function NavCard({ to, icon, label, color }) {
-  const c = COLOR_MAP[color] || COLOR_MAP.blue;
-  return (
-    <Link
-      to={to}
-      className={`${c.bg} text-white rounded-xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 group`}
-    >
-      <div className={`${c.icon} bg-opacity-60 p-3 rounded-full text-2xl`}>{icon}</div>
-      <span className="text-sm font-semibold text-center leading-tight">{label}</span>
-    </Link>
   );
 }

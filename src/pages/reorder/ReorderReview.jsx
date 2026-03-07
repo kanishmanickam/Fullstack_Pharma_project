@@ -34,7 +34,7 @@ const ReorderReview = () => {
         setAllSuppliers(suppRes.data.suppliers || []);
       } else {
         const res = await axiosInstance.get('/suppliers/purchase-orders');
-        setPurchaseOrders(res.data.purchaseOrders || []);
+        setPurchaseOrders(res.data.orders || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -285,6 +285,29 @@ const ReorderReview = () => {
                     </div>
                   )}
                 </div>
+
+                {order.notes && (
+                  <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border-l-4 border-gray-300 italic">
+                    <span className="font-semibold not-italic text-gray-800">Notes: </span> {order.notes}
+                  </div>
+                )}
+
+                {order.order_status === 'Pending' && (
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => updateOrderStatus(order._id, 'Ordered')}
+                      className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                    >
+                      Mark as Ordered
+                    </button>
+                    <button
+                      onClick={() => updateOrderStatus(order._id, 'Cancelled')}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Cancel Order
+                    </button>
+                  </div>
+                )}
 
                 {order.order_status === 'Ordered' && (
                   <div className="flex gap-2 mt-4">

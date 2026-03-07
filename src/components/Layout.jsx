@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   FaTachometerAlt, FaBoxes, FaFileInvoice, FaUsers, FaUsersCog,
-  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills, FaTruck, FaClipboardList
+  FaChartLine, FaBrain, FaFileUpload, FaSignOutAlt, FaRobot, FaMoneyBillWave, FaPills, FaTruck, FaClipboardList, FaList
 } from 'react-icons/fa';
 import { useState } from 'react';
 import Chatbot from './Chatbot';
@@ -19,30 +19,54 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <FaTachometerAlt />, roles: ['owner', 'staff'] },
-    { path: '/inventory', label: 'Inventory', icon: <FaBoxes />, roles: ['owner', 'staff'] },
-    { path: '/medicine-inventory', label: 'Medicine Inventory', icon: <FaPills />, roles: ['owner', 'staff'] },
-    { path: '/billing', label: 'Billing', icon: <FaFileInvoice />, roles: ['owner', 'staff'] },
-    { path: '/customers', label: 'Customers', icon: <FaUsers />, roles: ['owner', 'staff'] },
-    { path: '/suppliers', label: 'Suppliers', icon: <FaTruck />, roles: ['owner', 'staff'] },
-    { path: '/reorder-review', label: 'Reorder Management', icon: <FaClipboardList />, roles: ['owner', 'staff'] },
-    { path: '/excel-upload', label: 'Excel Upload', icon: <FaFileUpload />, roles: ['owner', 'staff'] },
-    { path: '/user-management', label: 'User Management', icon: <FaUsersCog />, roles: ['owner'] },
-    { path: '/stock-intelligence', label: 'Stock Intelligence', icon: <FaBrain />, roles: ['owner'] },
-    { path: '/reports', label: 'Reports & Analytics', icon: <FaChartLine />, roles: ['owner'] },
-    { path: '/financial-reports', label: 'Financial Reports', icon: <FaMoneyBillWave />, roles: ['owner'] },
+  const navGroups = [
+    {
+      title: 'Pharmacy Operations',
+      items: [
+        { path: '/dashboard', label: 'Dashboard', icon: <FaTachometerAlt />, roles: ['owner', 'staff'] },
+        { path: '/billing', label: 'Billing POS', icon: <FaFileInvoice />, roles: ['owner', 'staff'] },
+        { path: '/inventory', label: 'Live Stock', icon: <FaBoxes />, roles: ['owner', 'staff'] },
+        { path: '/medicine-inventory', label: 'Medicine DB', icon: <FaPills />, roles: ['owner', 'staff'] },
+        { path: '/customers', label: 'Customers', icon: <FaUsers />, roles: ['owner', 'staff'] },
+      ]
+    },
+    {
+      title: 'Supply Chain',
+      items: [
+        { path: '/suppliers', label: 'Suppliers', icon: <FaTruck />, roles: ['owner', 'staff'] },
+        { path: '/reorder-review', label: 'Reorders', icon: <FaClipboardList />, roles: ['owner', 'staff'] },
+        { path: '/excel-upload', label: 'Bulk Import', icon: <FaFileUpload />, roles: ['owner', 'staff'] },
+      ]
+    },
+    {
+      title: 'Intelligence & Reports',
+      items: [
+        { path: '/stock-intelligence', label: 'Stock AI', icon: <FaBrain />, roles: ['owner'] },
+        { path: '/ai/forecast-review', label: 'Forecasts', icon: <FaChartLine />, roles: ['owner', 'staff'] },
+        { path: '/ai/demand-setup', label: 'Forecast Setup', icon: <FaBrain />, roles: ['owner'] },
+        { path: '/reports', label: 'Analytics', icon: <FaChartLine />, roles: ['owner'] },
+        { path: '/financial-reports', label: 'Financials', icon: <FaMoneyBillWave />, roles: ['owner'] },
+      ]
+    },
+    {
+      title: 'Administration',
+      items: [
+        { path: '/user-management', label: 'Users', icon: <FaUsersCog />, roles: ['owner'] },
+        { path: '/activity-log', label: 'Activity Log', icon: <FaList />, roles: ['owner'] },
+      ]
+    }
   ];
 
-  const filteredNavItems = navItems.filter(item =>
-    item.roles.includes(currentUser?.role)
-  );
+  const filteredNavGroups = navGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => item.roles.includes(currentUser?.role))
+  })).filter(group => group.items.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg fixed h-full overflow-y-auto">
-        <div className="p-6">
+      <aside className="w-64 bg-white shadow-lg fixed h-full flex flex-col">
+        <div className="p-6 shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <div className="h-9 w-9 rounded-xl overflow-hidden bg-primary-50 border border-primary-100 shadow-sm flex-shrink-0">
               <img src={logo} alt="MediStock Logo" className="h-full w-full object-cover" />
@@ -54,23 +78,30 @@ const Layout = ({ children }) => {
           <p className="text-xs text-gray-500">Smart Inventory. Safer Care.</p>
         </div>
 
-        <nav className="px-4">
-          {filteredNavItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${location.pathname === item.path
-                ? 'bg-primary-600 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
-                }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </Link>
+        <nav className="px-4 flex-1 overflow-y-auto pt-2 pb-4">
+          {filteredNavGroups.map((group, idx) => (
+            <div key={idx} className="mb-6">
+              <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                {group.title}
+              </h3>
+              {group.items.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mb-1 transition-colors ${location.pathname === item.path
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span className="font-medium text-sm">{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <div className="p-4 absolute bottom-0 w-64 bg-white border-t">
+        <div className="p-4 shrink-0 bg-white border-t">
           <div className="bg-gray-50 p-3 rounded-lg mb-3">
             <p className="text-sm font-semibold text-gray-900">{currentUser?.name}</p>
             <p className="text-xs text-gray-500 capitalize">{currentUser?.role}</p>

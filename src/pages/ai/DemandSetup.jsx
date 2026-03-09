@@ -100,7 +100,7 @@ export default function DemandSetup() {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Forecast Horizon (Weeks)
+                                Order Planning Horizon (Weeks)
                             </label>
                             <input
                                 type="number"
@@ -110,12 +110,12 @@ export default function DemandSetup() {
                                 className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                                 min="1" max="12"
                             />
-                            <p className="text-xs text-gray-400 mt-1">Number of weeks to predict into the future.</p>
+                            <p className="text-xs text-gray-400 mt-1">How many weeks into the future do you want to plan your stock for?</p>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Lead Time (Days)
+                                Supplier Shipping Delay (Days)
                             </label>
                             <input
                                 type="number"
@@ -125,12 +125,12 @@ export default function DemandSetup() {
                                 className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                                 min="1" max="60"
                             />
-                            <p className="text-xs text-gray-400 mt-1">Average time taken to receive stock from suppliers.</p>
+                            <p className="text-xs text-gray-400 mt-1">Average number of days it takes for a box to arrive after ordering.</p>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Safety Stock (%)
+                                Emergency Buffer Stock (%)
                             </label>
                             <input
                                 type="number"
@@ -140,7 +140,7 @@ export default function DemandSetup() {
                                 className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                                 min="0" max="100"
                             />
-                            <p className="text-xs text-gray-400 mt-1">Extra stock kept to prevent stock-outs during variability.</p>
+                            <p className="text-xs text-gray-400 mt-1">Extra buffer percentage to keep on shelves for sudden demand spikes or late shipments.</p>
                         </div>
 
                         <div className="pt-4 flex gap-3">
@@ -167,8 +167,8 @@ export default function DemandSetup() {
                             <FaBrain className="text-purple-500" /> Seasonal Multipliers
                         </h2>
                         <p className="text-xs text-gray-500 mb-4">
-                            Adjust demand multipliers for peaks (e.g., flu season, allergies). <br />
-                            1.0 = Normal, 1.4 = 40% higher demand.
+                            Teach the AI when to expect seasonal disease spikes (e.g., flu season, monsoon allergies). <br />
+                            <strong>1.0x</strong> = Normal Month,  <strong>1.4x</strong> = 40% more patients expected.
                         </p>
 
                         <div className="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -199,9 +199,9 @@ export default function DemandSetup() {
                         <div>
                             <p className="font-semibold text-blue-900">How the AI engine works</p>
                             <p className="text-sm text-blue-700 leading-relaxed">
-                                The forecasting engine uses <strong>Holt-Winters Triple Exponential Smoothing</strong> to analyze your historical sales data.
-                                It identifies trends and overlays your <strong>Seasonal Multipliers</strong> to predict future demand.
-                                The "Run Forecast" action will generate reorder recommendations based on current stock levels, safety stock targets, and predicted outflow.
+                                The forecasting engine uses a <strong>TensorFlow Long Short-Term Memory (LSTM) Neural Network</strong> to analyze your historical sales data.
+                                It identifies complex sequential patterns spanning 90 days and overlays your <strong>Seasonal Multipliers</strong> to predict future demand.
+                                The "Run Forecast" action will compile the model and generate precise reorder recommendations based on dynamically learned outflow.
                             </p>
                         </div>
                     </div>

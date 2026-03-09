@@ -1,4 +1,4 @@
-import { Medicine, AuditLog, InventoryHistory } from '../models/index.js';
+import { Medicine, AuditLog, InventoryHistory, ForecastParameters } from '../models/index.js';
 import { PurchaseOrder, Supplier } from '../models/supplierModels.js';
 import { computeForecast } from '../ml/demandForecast.js';
 import log from '../utils/logger.js';
@@ -15,12 +15,18 @@ export const runForecast = async (req, res) => {
     try {
         const medicines = await Medicine.find();
 
+        let dbParams = await ForecastParameters.findOne().lean();
+        if (!dbParams) {
+            dbParams = await ForecastParameters.create(DEFAULT_PARAMS);
+            dbParams = dbParams.toObject();
+        }
+
         // Delete existing AI_Drafts so we don't pile them up
         await PurchaseOrder.deleteMany({ order_status: 'AI_Draft' });
 
         const drafts = [];
         for (const med of medicines) {
-            const forecast = await computeForecast(med, DEFAULT_PARAMS);
+            const forecast = await computeForecast(med, dbParams);
 
             if (forecast.optimalReorderQty > 0 || forecast.priority === 'critical') {
                 // Determine supplier
@@ -37,7 +43,7 @@ export const runForecast = async (req, res) => {
                     requested_quantity: forecast.optimalReorderQty,
                     unit_price: med.purchasePrice,
                     total_amount: forecast.optimalReorderQty * med.purchasePrice,
-                    expected_delivery_date: new Date(Date.now() + DEFAULT_PARAMS.leadTimeDays * 24 * 60 * 60 * 1000),
+                    expected_delivery_date: new Date(Date.now() + dbParams.leadTimeDays * 24 * 60 * 60 * 1000),
                     order_status: 'AI_Draft',
                     created_by: req.user.id,
                     ai_forecast_reference: {
@@ -72,19 +78,19 @@ export const getRecommendations = async (req, res) => {
         // AI Recommendations are just AI_Draft purchase orders now natively
         const recommendations = await PurchaseOrder.find({ order_status: 'AI_Draft' })
             .populate('supplier_id').populate('medicine_id');
-        
+
         // Mold into Recommendation UI component array shape natively:
         const mapped = recommendations.map(r => ({
-           _id: r._id,
-           medicineId: r.medicine_id,
-           medicineName: r.medicine_name,
-           category: r.medicine_id?.category || 'Unknown',
-           currentStock: r.medicine_id?.quantity || 0,
-           predictedDemand: r.ai_forecast_reference?.demand_predicted || 0,
-           optimalReorderQty: r.requested_quantity,
-           restockingDate: r.expected_delivery_date,
-           priority: r.ai_forecast_reference?.priority || 'medium',
-           status: 'pending' 
+            _id: r._id,
+            medicineId: r.medicine_id,
+            medicineName: r.medicine_name,
+            category: r.medicine_id?.category || 'Unknown',
+            currentStock: r.medicine_id?.quantity || 0,
+            predictedDemand: r.ai_forecast_reference?.demand_predicted || 0,
+            optimalReorderQty: r.requested_quantity,
+            restockingDate: r.expected_delivery_date,
+            priority: r.ai_forecast_reference?.priority || 'medium',
+            status: 'pending'
         }));
 
         res.status(200).json({ success: true, count: mapped.length, recommendations: mapped });
@@ -131,13 +137,32 @@ export const deleteRecommendation = async (req, res) => {
     }
 };
 
-// Return standard config since DB singleton is deleted
+// Return DB config, fallback to default if missing
 export const getDemandParameters = async (req, res) => {
-    res.status(200).json({ success: true, parameters: DEFAULT_PARAMS });
+    try {
+        let params = await ForecastParameters.findOne().lean();
+        if (!params) {
+            params = await ForecastParameters.create(DEFAULT_PARAMS);
+            params = params.toObject();
+        }
+        res.status(200).json({ success: true, parameters: params });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching', error: error.message });
+    }
 };
 
 export const saveDemandParameters = async (req, res) => {
-    res.status(200).json({ success: true, parameters: DEFAULT_PARAMS });
+    try {
+        const updates = req.body;
+        const params = await ForecastParameters.findOneAndUpdate(
+            {},
+            updates,
+            { new: true, upsert: true, setDefaultsOnInsert: true, lean: true }
+        );
+        res.status(200).json({ success: true, parameters: params });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error saving', error: error.message });
+    }
 };
 
 export const getTrendData = async (req, res) => {

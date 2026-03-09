@@ -2,6 +2,7 @@
 
 import mongoose from 'mongoose';
 import bcryptjs from 'bcryptjs';
+import { ForecastParameters } from './forecastModel.js';
 
 // ============ USER SCHEMA ============
 const userSchema = new mongoose.Schema(
@@ -651,4 +652,5 @@ export {
   Prescription,
   Order,
   AuditLog,
+  ForecastParameters,
 };

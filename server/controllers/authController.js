@@ -293,6 +293,21 @@ export const updateUser = async (req, res) => {
       });
     }
 
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Prevent owner from modifying another owner's critical properties (deactivation or demotion)
+    if (targetUser.role === 'owner' && id !== req.user.id) {
+      if (typeof isActive === 'boolean' || (role && role !== 'owner')) {
+        return res.status(403).json({
+          success: false,
+          message: 'You cannot demote or deactivate another administrator account',
+        });
+      }
+    }
+
     const updateData = {};
     if (username) updateData.username = username;
     if (email) updateData.email = email;
@@ -362,14 +377,23 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndDelete(id);
-
-    if (!user) {
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
+
+    // Prevent deleting another administrator
+    if (targetUser.role === 'owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot delete another administrator account',
+      });
+    }
+
+    const user = await User.findByIdAndDelete(id);
 
     log('INFO', 'User deleted', {
       deletedUserId: id,

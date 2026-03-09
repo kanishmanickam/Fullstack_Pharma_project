@@ -44,7 +44,7 @@ const UserManagement = () => {
           email: formData.email,
           role: formData.role,
         };
-        
+
         // Only include password if it's been changed
         if (formData.password) {
           updateData.password = formData.password;
@@ -212,8 +212,8 @@ const UserManagement = () => {
                       <option value="owner">Admin (Owner)</option>
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      {formData.role === 'owner' 
-                        ? '✓ Full access to all modules including financials and user management' 
+                      {formData.role === 'owner'
+                        ? '✓ Full access to all modules including financials and user management'
                         : '✓ Can perform billing, uploads, and chatbot queries'}
                     </p>
                   </div>
@@ -242,8 +242,8 @@ const UserManagement = () => {
         {/* Users List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {users.map((user) => (
-            <div 
-              key={user.id} 
+            <div
+              key={user.id}
               className={`bg-white rounded-lg shadow p-6 ${!user.isActive ? 'opacity-60' : ''}`}
             >
               <div className="flex justify-between items-start mb-4">
@@ -285,18 +285,22 @@ const UserManagement = () => {
                 >
                   <FaEdit /> Edit
                 </button>
-                <button
-                  onClick={() => toggleUserStatus(user.id, user.isActive, user.username)}
-                  className={`flex-1 px-3 py-2 ${user.isActive ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded text-sm`}
-                >
-                  {user.isActive ? 'Deactivate' : 'Activate'}
-                </button>
-                <button
-                  onClick={() => handleDelete(user.id, user.username)}
-                  className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                >
-                  <FaTrash />
-                </button>
+                {user.role !== 'owner' && (
+                  <>
+                    <button
+                      onClick={() => toggleUserStatus(user.id, user.isActive, user.username)}
+                      className={`flex-1 px-3 py-2 ${user.isActive ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded text-sm`}
+                    >
+                      {user.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user.id, user.username)}
+                      className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                    >
+                      <FaTrash />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}

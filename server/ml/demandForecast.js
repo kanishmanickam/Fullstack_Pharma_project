@@ -1,4 +1,5 @@
 import { Medicine, Bill, InventoryHistory } from '../models/index.js';
+import { lstmForecast } from './lstmModel.js';
 
 /**
  * Holt-Winters Double Exponential Smoothing (Trend-adjusted)
@@ -144,9 +145,9 @@ export const computeForecast = async (medicine, params) => {
         };
     }
 
-    // Run Holt-Winters
+    // Run LSTM Forecast
     const horizonDays = params.forecastHorizon * 7;
-    const rawForecast = holtWintersForecast(series, 0.3, 0.1, horizonDays);
+    const rawForecast = await lstmForecast(series, horizonDays);
     const predictedSum = rawForecast.reduce((a, b) => a + b, 0);
 
     const currentMonth = new Date().getMonth();

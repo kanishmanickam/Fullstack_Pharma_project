@@ -1,303 +1,123 @@
 # MediStock AI
 
-A full-stack pharmacy inventory management system built with React, Node.js, Express, and MongoDB. It brings together day-to-day pharmacy operations — billing, stock tracking, prescription handling, supplier management — under one roof, with AI-powered demand forecasting and a voice-enabled chatbot on top.
+A clinical-grade, full-stack pharmacy inventory and management system built with React 18, Node.js, Express, and MongoDB. MediStock AI transitions traditional pharmacy tracking into a proactive, intelligent ecosystem using local machine learning forecasting, context-aware LLM agents, and robust multi-batch ledgers.
 
 ---
 
-## What This Project Does
+## Core Features and Owner Benefits
 
-Running a pharmacy involves a lot of moving parts: medicines expiring, stock running low at the wrong time, bills to generate, prescriptions to verify, and suppliers to reorder from. MediStock AI handles all of that in one place. The owner gets full control over everything, while staff members can handle billing and customer-facing tasks without needing access to sensitive financial data.
+### 1. Smart Purchase Auto-Drafts (No More Stockouts or Dead Stock)
+* **The Technology**: Powered by local **TensorFlow.js (LSTM Recurrent Neural Networks)** and Holt-Winters smoothing.
+* **How it helps you**: The system automatically analyzes your last 90 days of sales to predict exactly how much of each medicine you will need in the coming weeks. It then **automatically drafts purchase orders** for your suppliers, taking the guesswork out of ordering, preventing empty shelves, and saving you from tying up cash in unsold "dead stock."
 
----
+### 2. Hands-Free Bilingual Voice Assistant (Instant Stock Answers)
+* **The Technology**: Powered by a secure backend integration with **Google Gemini 2.0 Flash**.
+* **How it helps you**: When your hands are full assisting customers or counting inventory, you and your staff can simply **speak to the system** in English or Tamil. Ask questions like *"Where is Paracetamol?"* or *"What is expiring soon?"*, and the chatbot will instantly retrieve the exact batch, current stock level, and rack location for you.
 
-## Tech Stack
+### 3. High-Accessibility Tamil Speech (Works on Any Device)
+* **The Technology**: Custom Tamil Unicode-to-English phonetic character mapping engine.
+* **How it helps you**: You don’t need to buy expensive, high-end computers for your shop. Our custom phonetic mapping engine ensures the Tamil voice assistant works smoothly and speaks clearly on **any device** (smartphones, cheap tablets, or old PCs) - even if the device does not natively support Tamil system voices.
 
-**Frontend**
-- React 18 with React Router v7
-- Vite as the build tool
-- Tailwind CSS for styling
-- Material UI (MUI) for data grids and date pickers
-- Recharts for charts and graphs
-- Axios for HTTP communication
+### 4. FEFO-Driven Batch Tracking (Drastically Reduce Expired Waste)
+* **The Technology**: Multi-batch ledger with automatic **First-Expired, First-Out (FEFO)** sorting.
+* **How it helps you**: Stop losing money to expired medicines. The system tracks products by batch number, specific shelf/rack location, and expiry date. When generating a bill, **it automatically suggests stock from the batch closest to expiry first**, making sure you sell older inventory before it goes to waste.
 
-**Backend**
-- Node.js with Express
-- MongoDB via Mongoose (supports both Atlas and local Docker)
-- JWT-based authentication with role-based access control
-- Bcrypt for password hashing
-- Multer for file uploads
-- PDFKit for generating invoice PDFs
-- Nodemailer for email alerts
-- Twilio for WhatsApp notifications
-- TensorFlow.js for LSTM-based demand forecasting
-
-**Dev & Testing**
-- Nodemon for backend hot reload
-- Jest + Supertest for API testing
-- Docker Compose for running MongoDB locally
+### 5. Secure Prescription & Order Workflow (Expand Your Shop Online)
+* **The Technology**: Secure image upload (via Multer), dynamic status pipelines, and automated Twilio WhatsApp / Nodemailer email notifications.
+* **How it helps you**: Modernize your pharmacy by letting customers securely upload photos of their prescriptions online. You can quickly review, approve, or reject uploads from a clean dashboard. Once approved, the system **automatically alerts the customer via WhatsApp and email**, keeping them informed and driving higher customer satisfaction.
 
 ---
 
-## Project Structure
+## Technology Stack
 
-```
-├── src/                          # React frontend
-│   ├── pages/
-│   │   ├── Dashboard.jsx
-│   │   ├── Inventory.jsx
-│   │   ├── Billing.jsx
-│   │   ├── Customers.jsx
-│   │   ├── Reports.jsx
-│   │   ├── FinancialReports.jsx
-│   │   ├── StockIntelligence.jsx
-│   │   ├── MedicineInventory.jsx
-│   │   ├── ExcelUpload.jsx
-│   │   ├── ActivityLog.jsx
-│   │   ├── admin/UserManagement.jsx
-│   │   ├── ai/DemandSetup.jsx
-│   │   ├── ai/ForecastReview.jsx
-│   │   ├── reorder/SupplierManagement.jsx
-│   │   └── reorder/ReorderReview.jsx
-│   ├── components/               # Layout, Chatbot, ProtectedRoute, modals
-│   ├── context/AuthContext.jsx   # Auth state (login/logout/user info)
-│   └── utils/                   # Axios config, API helpers, Gemini client, Tamil TTS
-│
-├── server/                       # Express backend
-│   ├── controllers/              # Business logic for every module
-│   ├── routes/                   # Express route definitions
-│   ├── models/index.js           # All Mongoose schemas (User, Medicine, Bill, etc.)
-│   ├── middleware/               # Auth guard, audit logger, error handler, file upload
-│   ├── ml/                       # LSTM + Holt-Winters demand forecasting logic
-│   ├── utils/                    # Logger, notifications, PDF generator, helpers
-│   ├── config/database.js        # MongoDB connection setup
-│   └── server.js                 # App entry point, route mounting, CORS config
-│
-├── docker-compose.yml            # Spins up local MongoDB container
-├── vite.config.js
-└── tailwind.config.js
-```
-
----
-
-## Features
-
-### Inventory Management
-- Add medicines with batch numbers, expiry dates, rack numbers, and pricing
-- Multi-batch support per medicine — each batch tracked independently
-- FEFO (First Expired, First Out) sorting applied automatically when dispensing stock
-- Stock status colour coding: RED (at or below reorder level), YELLOW (medium), GREEN (healthy)
-- Near-expiry detection with configurable warning window
-
-### Billing and Invoicing
-- Create bills by searching medicines; voice input also supported
-- GST calculated and itemised on every bill
-- Generates a branded PDF invoice via PDFKit
-- Bill history stored and linked to customer profiles
-- Stock automatically deducted in FEFO order when a bill is saved
-
-### Prescription Workflow
-- Customers upload prescription images (max 5 MB)
-- Owner reviews and approves or rejects prescriptions
-- Email notification sent to the customer on status change
-
-### Order Management
-- Full order lifecycle: Placed → Confirmed → Dispatched → Delivered
-- Dynamic GST and delivery charge calculation
-- WhatsApp and email notifications triggered at each status update
-
-### AI Demand Forecasting
-- Pulls historical sales data from bills and inventory history
-- Holt-Winters double exponential smoothing handles trend-adjusted forecasting
-- LSTM neural network (TensorFlow.js) runs alongside for pattern recognition
-- Month-by-month seasonal multipliers are configurable
-- Automatically generates draft purchase orders based on forecast output
-- Owner reviews and approves drafts before they are sent to suppliers
-
-### Supplier Management
-- Supplier profiles with the medicine categories they supply
-- Raise and track purchase orders against suppliers
-- Medicines linked back to their source supplier for reorder workflows
-
-### Reports and Analytics
-- Daily, weekly, and monthly sales reports
-- Purchase vs. sales side-by-side comparison with profit margin calculations
-- Financial summaries exportable
-- Alert history and full audit trail available
-
-### AI Chatbot
-- Powered by Google Gemini 2.0 Flash
-- Injected with a live snapshot of the current inventory at query time
-- Answers questions about stock levels, expiry dates, and low-stock warnings
-- Supports English and Tamil
-- Voice input and Tamil TTS (text-to-speech) available in the browser
-
-### Notifications
-- Email via Nodemailer (Gmail with App Password)
-- WhatsApp via Twilio sandbox
-- Falls back gracefully to console mock logs if credentials are not configured
-
-### Security and Audit
-- JWT authentication; tokens verified on every protected request
-- Two-factor authentication using TOTP (Speakeasy, QR code setup flow)
-- Role-based access: `owner` has full access, `staff` is limited to operational tasks
-- Every significant action is logged to an audit trail
-- Audit logs visible to owners in the Activity Log page
-
-### Excel Bulk Upload
-- Upload inventory in bulk from an Excel (.xlsx) file
-- Anomaly detection catches negative quantities, past expiry dates, and missing fields
-- Covered by Jest + Supertest integration tests
+* **Frontend**: React 18, Vite, Tailwind CSS, Material UI (MUI), Recharts
+* **Backend**: Node.js, Express, Mongoose (MongoDB Atlas / Docker Compose)
+* **AI & NLP**: TensorFlow.js, Google Gemini 2.0 Flash, Web Speech API (TTS/STT)
+* **Integrations**: Twilio API (WhatsApp), Nodemailer, PDFKit (Invoice Generation)
+* **Testing**: Jest, Supertest
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18 or later
-- npm
-- MongoDB Atlas account, or Docker for running MongoDB locally
+* Node.js (v18 or later)
+* MongoDB (Atlas or local Docker instance)
 
-### 1. Clone and Install
+### Setup & Installation
 
-```bash
-git clone https://github.com/kanishmanickam/Fullstack_Pharma_project.git
-cd Fullstack_Pharma_project
+1. **Clone and Install Dependencies:**
+   ```bash
+   git clone https://github.com/kanishmanickam/Fullstack_Pharma_project.git
+   cd Fullstack_Pharma_project
+   npm install
+   cd server && npm install
+   ```
 
-# Frontend
-npm install
+2. **Configure Environment Variables:**
 
-# Backend
-cd server
-npm install
-```
+   * **Root Directory `.env`** (for Frontend configuration & local Docker Compose):
+     ```env
+     VITE_API_BASE_URL="http://localhost:5000/api"
+     
+     # MongoDB Root Credentials for Local Docker Compose
+     MONGO_ROOT_USER="admin"
+     MONGO_ROOT_PASSWORD="super_secret_password"
+     ```
 
-### 2. Environment Variables
+   * **Backend Directory `server/.env`** (for secure keys - never exposed to the client):
+     ```env
+     PORT=5000
+     NODE_ENV=development
+     MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/medistock
+     JWT_SECRET=your_jwt_secret_key
+     
+     # Secure AI Integrations
+     GEMINI_API_KEY=your_google_gemini_api_key
+     
+     # Notifications & Messaging
+     EMAIL_USER=your_gmail@gmail.com
+     EMAIL_PASSWORD=your_app_password
+     TWILIO_ACCOUNT_SID=your_twilio_sid
+     TWILIO_AUTH_TOKEN=your_twilio_token
+     ```
 
-**Root directory — create `.env.local`:**
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_GEMINI_API_KEY=your_gemini_api_key
-VITE_GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
-```
+3. **Run the Application:**
+   ```bash
+   # Terminal 1 - Frontend Dev Server
+   npm run dev
 
-**`server/` directory — create `.env`:**
-```env
-# MongoDB (Atlas URI or local connection string)
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/medistock
+   # Terminal 2 - Express API Server
+   cd server
+   npm run dev
+   ```
 
-# Auth
-JWT_SECRET=your_jwt_secret_here
-
-# Email — Gmail App Password required (not your regular account password)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASSWORD=your_app_password
-OWNER_EMAIL=owner@yourdomain.com
-
-# Twilio WhatsApp (optional)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_NUMBER=+14155238886
-OWNER_WHATSAPP_NUMBER=+91xxxxxxxxxx
-
-# Server
-NODE_ENV=development
-PORT=5000
-FRONTEND_URL=http://localhost:5173
-```
-
-If email or Twilio credentials are missing, the app logs mock notifications to the console and keeps running normally.
-
-### 3. Start the App
-
-Open two terminals:
-
-```bash
-# Terminal 1 — Backend
-cd server
-npm run dev
-# Runs at http://localhost:5000
-```
-
-```bash
-# Terminal 2 — Frontend
-npm run dev
-# Runs at http://localhost:5173
-```
-
-### 4. (Optional) Local MongoDB with Docker
-
-If you prefer not to use Atlas:
-
-```bash
-# Add MONGO_ROOT_USER and MONGO_ROOT_PASSWORD to a .env in the root directory first
-docker-compose up -d
-```
-
-Then update `MONGODB_URI` in `server/.env` to `mongodb://localhost:27017/medistock`.
-
-### 5. Seed the Database
-
-Only needed when starting with an empty database:
-
-```bash
-cd server
-npm run seed
-```
+4. **Verify with Tests:**
+   ```bash
+   cd server
+   npm test
+   ```
 
 ---
 
-## API Routes
+## Contributing
 
-The backend runs at `http://localhost:5000`. All protected routes require the header `Authorization: Bearer <token>`.
-
-| Route | Description |
-|-------|-------------|
-| `POST /api/auth/login` | Login, returns JWT |
-| `POST /api/auth/register` | Register a user (owner only) |
-| `GET /api/inventory` | List all medicines, FEFO sorted |
-| `POST /api/billing` | Create a bill, deducts stock |
-| `GET /api/reports/sales` | Sales report (daily / weekly / monthly) |
-| `POST /api/prescriptions/upload` | Upload prescription image |
-| `POST /api/forecast/run` | Run AI forecast, generate draft POs |
-| `GET /api/suppliers` | List suppliers |
-| `GET /api/orders` | List orders |
-| `GET /api/customers` | List customers |
-| `GET /api/alerts` | Stock and expiry alerts |
-| `POST /api/chatbot` | Query the AI chatbot |
-| `GET /api/audit` | Audit log entries |
-| `GET /api/notifications` | Notification history |
+Contributions are welcome to help improve MediStock AI. To contribute:
+1. Fork the repository and create a new feature branch (`feature/your-feature-name`).
+2. Adhere to our FEFO batch management, secure backend proxy, and MERN design patterns.
+3. Ensure all backend changes are validated by running `npm test` (Jest & Supertest).
+4. Open a Pull Request detailing your changes and verification steps.
 
 ---
 
-## Running Tests
+## License
 
-```bash
-cd server
-npm test
-```
+This project is licensed under the MIT License.
 
-Tests cover billing controller logic, billing math helpers, and the bulk Excel upload endpoint. Uses Jest and Supertest.
+Copyright (c) 2026
 
----
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-## Troubleshooting
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-**MongoDB connection fails**
-If you are using Atlas, make sure your current IP is whitelisted. Go to Network Access in the Atlas dashboard and add `0.0.0.0/0` for development.
-
-**Port already in use (Windows)**
-```bash
-netstat -ano | findstr :5000
-taskkill /F /PID <PID>
-```
-
-**Emails not sending**
-Gmail requires an App Password, not your regular account password. Generate one under Google Account → Security → 2-Step Verification → App Passwords.
-
-**WhatsApp messages not arriving**
-You need to first join the Twilio sandbox by sending the sandbox join message from your phone to the Twilio WhatsApp number. After that, outbound messages will work.
-
-**2FA QR code not appearing**
-Make sure `JWT_SECRET` is set in `server/.env`. The TOTP secret is generated server-side when the user starts setup from the Security Settings modal in the frontend.
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

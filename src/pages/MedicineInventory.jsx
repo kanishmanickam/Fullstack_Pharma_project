@@ -1,3 +1,8 @@
+/**
+ * @file Manages medicine inventory records, batches, pricing, and dynamic categories.
+ * @module pages/MedicineInventory
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import dayjs from 'dayjs';
@@ -40,17 +45,6 @@ import {
     FaTimes,
     FaPills,
 } from 'react-icons/fa';
-
-const CATEGORIES = [
-    'Tablet',
-    'Capsule',
-    'Syrup',
-    'Injection',
-    'Ointment',
-    'Drops',
-    'Inhaler',
-    'Supplement',
-];
 
 const emptyForm = {
     medicineId: '',
@@ -117,6 +111,7 @@ const MedicineInventory = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Fetches active suppliers from the backend database.
     const fetchSuppliers = useCallback(async function fetchSuppliersImpl() {
         try {
             const res = await axiosInstance.get('/suppliers');
@@ -131,7 +126,7 @@ const MedicineInventory = () => {
     useEffect(() => {
         fetchMedicines();
         fetchSuppliers();
-    }, []);
+    }, [fetchMedicines, fetchSuppliers]);
 
     // ── helpers ────────────────────────────────────────────
     function showSnackbar(message, severity = 'success') {
@@ -470,22 +465,17 @@ const MedicineInventory = () => {
                                 />
                             </Grid>
 
-                            {/* 3 — Category */}
+                             {/* 3 — Category */}
                             <Grid item xs={12} sm={6} md={3}>
-                                <FormControl fullWidth size="small" required>
-                                    <InputLabel>Category</InputLabel>
-                                    <Select
-                                        value={form.category}
-                                        label="Category"
-                                        onChange={handleChange('category')}
-                                    >
-                                        {CATEGORIES.map((cat) => (
-                                            <MenuItem key={cat} value={cat}>
-                                                {cat}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
+                                <TextField
+                                    label="Category"
+                                    fullWidth
+                                    size="small"
+                                    required
+                                    value={form.category}
+                                    onChange={handleChange('category')}
+                                    placeholder="e.g., Tablet, Syrup, Capsule"
+                                />
                             </Grid>
 
                             {/* Rack Number */}

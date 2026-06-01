@@ -1,14 +1,6 @@
 /**
- * auditLogger.js — Async fire-and-forget audit middleware
- *
- * Hooks into `res.on('finish')` so the audit DB write happens AFTER
- * the HTTP response is flushed to the client. This means:
- *  - Zero latency added to any user-facing request
- *  - If the audit write fails, the original request is unaffected
- *
- * Automatically intercepts: POST, PUT, PATCH, DELETE
- * Skips:  GET requests, failed requests (statusCode >= 400),
- *         and the login route (recorded explicitly in authController)
+ * @file Async audit logger middleware for recording system mutations.
+ * @module middleware/auditLogger
  */
 
 import { AuditLog } from '../models/auditLogModel.js';
@@ -22,12 +14,12 @@ const ROUTE_MAP = [
     { pattern: /\/api\/alerts\/.*\/resolve/i, action: 'ALERT_RESOLVED', module: 'Alerts' },
     { pattern: /\/api\/uploads/i, action: 'EXCEL_UPLOAD', module: 'DataImport' },
     { pattern: /\/api\/suppliers/i, action: 'SUPPLIER_CREATED', module: 'Suppliers' },
-    { pattern: /\/api\/orders/i, action: 'ORDER_CREATED', module: 'Orders' },
     { pattern: /\/api\/auth\/register/i, action: 'USER_CREATED', module: 'UserManagement' },
     { pattern: /\/api\/auth/i, action: 'USER_UPDATED', module: 'UserManagement' },
     { pattern: /\/api\/categories/i, action: 'CATEGORY_CREATED', module: 'Category Management' },
 ];
 
+// Resolves the audit log action type and system module from HTTP method and path.
 const resolveActionModule = (method, path) => {
     // DELETE method → always use DELETE action
     if (method === 'DELETE') {

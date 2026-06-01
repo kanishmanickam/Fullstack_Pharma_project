@@ -10,6 +10,7 @@ import axiosInstance from '../utils/axiosConfig';
 
 // MUI imports
 import {
+    Autocomplete,
     TextField,
     Button,
     Select,
@@ -64,6 +65,7 @@ const MedicineInventory = () => {
     const [medicines, setMedicines] = useState([]);
     const [allMedicines, setAllMedicines] = useState([]); // keep full list for searches
     const [suppliers, setSuppliers] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRow, setSelectedRow] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -123,10 +125,23 @@ const MedicineInventory = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Fetches dynamic medicine categories from the backend database.
+    const fetchCategories = useCallback(async function fetchCategoriesImpl() {
+        try {
+            const res = await axiosInstance.get('/categories');
+            const data = Array.isArray(res.data.categories) ? res.data.categories : [];
+            const categoryNames = data.map((c) => c.name);
+            setCategories(categoryNames);
+        } catch (error) {
+            console.error('Failed to fetch categories list:', error);
+        }
+    }, []);
+
     useEffect(() => {
         fetchMedicines();
         fetchSuppliers();
-    }, [fetchMedicines, fetchSuppliers]);
+        fetchCategories();
+    }, [fetchMedicines, fetchSuppliers, fetchCategories]);
 
     // ── helpers ────────────────────────────────────────────
     function showSnackbar(message, severity = 'success') {
@@ -263,6 +278,7 @@ const MedicineInventory = () => {
                 showSnackbar('Medicine deleted successfully');
             }
             fetchMedicines();
+            fetchCategories();
             resetForm();
         } catch (error) {
             console.error(`Operation ${type} failed:`, error);
@@ -467,14 +483,25 @@ const MedicineInventory = () => {
 
                              {/* 3 — Category */}
                             <Grid item xs={12} sm={6} md={3}>
-                                <TextField
-                                    label="Category"
-                                    fullWidth
-                                    size="small"
-                                    required
+                                <Autocomplete
+                                    freeSolo
+                                    options={categories}
                                     value={form.category}
-                                    onChange={handleChange('category')}
-                                    placeholder="e.g., Tablet, Syrup, Capsule"
+                                    onChange={(event, newValue) => {
+                                        setForm((prev) => ({ ...prev, category: newValue || '' }));
+                                    }}
+                                    onInputChange={(event, newInputValue) => {
+                                        setForm((prev) => ({ ...prev, category: newInputValue }));
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Category"
+                                            size="small"
+                                            required
+                                            placeholder="e.g., Tablet, Syrup"
+                                        />
+                                    )}
                                 />
                             </Grid>
 

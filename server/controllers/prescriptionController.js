@@ -1,7 +1,6 @@
 // Prescription Controller
 
 import { Prescription } from '../models/prescriptionModel.js';
-import { Customer } from '../models/customerModel.js';
 import { User } from '../models/userModel.js';
 import { sendEmailNotification } from '../utils/notifications.js';
 

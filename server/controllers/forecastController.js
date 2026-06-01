@@ -4,8 +4,6 @@ import { InventoryHistory } from '../models/inventoryHistoryModel.js';
 import { ForecastParameters } from '../models/forecastModel.js';
 import { PurchaseOrder, Supplier } from '../models/supplierModels.js';
 import { computeForecast } from '../ml/demandForecast.js';
-import log from '../utils/logger.js';
-
 // Hardcoded params (ForecastParameters schema deleted to remove singleton pattern)
 const DEFAULT_PARAMS = {
     forecastHorizon: 4,

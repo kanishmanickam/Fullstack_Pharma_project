@@ -1,3 +1,8 @@
+/**
+ * @file Main server initialization and routing setup.
+ * @module server
+ */
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -22,6 +27,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import forecastRoutes from './routes/forecastRoutes.js';
 import { auditLogger } from './middleware/auditLogger.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -42,9 +48,9 @@ const allowedOrigins = [
 console.log('✓ CORS Allowed Origins:', allowedOrigins);
 log('INFO', 'CORS Configuration', { allowedOrigins, frontendUrl: process.env.FRONTEND_URL });
 
+// Resolves and validates incoming CORS origins dynamically.
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl) or if origin is allowed
     if (!origin) {
       console.log('✓ CORS: No origin (Mobile/CLI request)');
       callback(null, true);
@@ -80,10 +86,16 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/forecast', forecastRoutes);
 
-// Serve uploaded files
-app.use('/uploads', express.static('uploads'));
+// Serves uploaded files securely with defensive browser execution controls.
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path, stat) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Security-Policy', "default-src 'none'");
+    res.set('X-Frame-Options', 'DENY');
+  }
+}));
 
-// Root route
+// Serves the root server API index route.
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,

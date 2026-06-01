@@ -1,3 +1,8 @@
+/**
+ * @file Frontend API clients and interceptors for HTTP requests.
+ * @module utils/api
+ */
+
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -97,6 +102,11 @@ export const reportAPI = {
   getDemandForecast: (medicineId, days) =>
     apiClient.get('/reports/forecast', { params: { medicineId, days } }),
   getStockClassification: () => apiClient.get('/reports/classification'),
+};
+
+// ============ CATEGORY APIs ============
+export const categoryAPI = {
+  getAllCategories: () => apiClient.get('/categories'),
 };
 
 // ============ CHATBOT APIs ============

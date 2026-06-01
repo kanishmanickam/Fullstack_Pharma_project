@@ -1,3 +1,8 @@
+/**
+ * @file Manages supplier profiles, procurement partners, and categories.
+ * @module pages/reorder/SupplierManagement
+ */
+
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import axiosInstance from '../../utils/axiosConfig';
@@ -9,6 +14,7 @@ const SupplierManagement = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categories, setCategories] = useState(['Tablet', 'Syrup', 'Injection', 'Capsule', 'Ointment', 'Drops', 'Other']);
   const [formData, setFormData] = useState({
     supplier_name: '',
     contact_info: {
@@ -23,12 +29,25 @@ const SupplierManagement = () => {
     notes: '',
   });
 
-  const categories = ['Tablet', 'Syrup', 'Injection', 'Capsule', 'Ointment', 'Drops', 'Other'];
-
   useEffect(() => {
     fetchSuppliers();
+    fetchCategories();
   }, []);
 
+  // Fetches dynamic medicine categories from the backend database.
+  const fetchCategories = async () => {
+    try {
+      const res = await axiosInstance.get('/categories');
+      const categoryNames = (res.data.categories || []).map((c) => c.name);
+      if (categoryNames.length > 0) {
+        setCategories(categoryNames);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  // Fetches active suppliers from the backend database.
   const fetchSuppliers = async () => {
     try {
       const res = await axiosInstance.get('/suppliers/suppliers');
@@ -109,7 +128,7 @@ const SupplierManagement = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Supplier Management</h1>
             <p className="text-gray-600 mt-2">
-              {suppliers.length > 0 
+              {suppliers.length > 0
                 ? `Manage suppliers and procurement partners • ${suppliers.length} supplier${suppliers.length !== 1 ? 's' : ''} available`
                 : 'Manage suppliers and procurement partners'}
             </p>
@@ -300,7 +319,7 @@ const SupplierManagement = () => {
                 <p>📞 {supplier.contact_info?.phone}</p>
                 <p>✉️ {supplier.contact_info?.email}</p>
                 <p>📍 {supplier.contact_info?.address}</p>
-                
+
                 <div className="flex items-center gap-2 mt-3">
                   <FaStar className="text-yellow-500" />
                   <span className="font-semibold">{supplier.delivery_performance_score?.toFixed(1) || '0.0'}/10</span>

@@ -1,3 +1,8 @@
+/**
+ * @file Database seeder script for local development environment.
+ * @module seedFiles/seedAll
+ */
+
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import connectDB from "../config/database.js";
@@ -9,14 +14,14 @@ import { InventoryHistory } from "../models/inventoryHistoryModel.js";
 import { AuditLog } from "../models/auditLogModel.js";
 import { Alert } from "../models/alertModel.js";
 import { Report } from "../models/reportModel.js";
-import { Notification } from "../models/notificationModel.js";
-import { Prescription } from "../models/prescriptionModel.js";
-import { Order } from "../models/orderModel.js";
 import { Supplier, PurchaseOrder } from "../models/supplierModels.js";
 
 dotenv.config();
 
+// Generates a random integer between min and max inclusive.
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+// Generates a date object representing a specific number of days ago.
 const daysAgoDate = (daysAgo, hour) => {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
@@ -50,10 +55,7 @@ const seedDatabase = async () => {
       AuditLog.deleteMany({}),
       PurchaseOrder.deleteMany({}),
       Alert.deleteMany({}),
-      Notification.deleteMany({}),
       Report.deleteMany({}),
-      Prescription.deleteMany({}),
-      Order.deleteMany({}),
     ]);
     console.log("✓ Existing data cleared");
 
@@ -611,56 +613,6 @@ const seedDatabase = async () => {
       });
     }
     await PurchaseOrder.insertMany(purchaseOrders);
-    await Notification.insertMany(notifications);
-
-    // Sub-Collections
-    const sampleCustomer = customers[0];
-    const prescription = await Prescription.create({
-      customerId: sampleCustomer._id,
-      customerName: sampleCustomer.name,
-      customerPhone: sampleCustomer.phone,
-      prescriptionFile: "/uploads/sample-prescription.pdf",
-      fileName: "doctors_note.pdf",
-      fileSize: 1048576,
-      status: "approved",
-      reviewedBy: owner._id,
-      reviewDate: new Date(),
-      prescribedMedicines: [
-        {
-          medicineName: "Paracetamol",
-          dosage: "500mg",
-          quantity: 10,
-          instructions: "Twice daily",
-        },
-      ],
-    });
-
-    await Order.insertMany([
-      {
-        orderNumber: `ORD-${rand(1000, 9999)}`,
-        customerId: sampleCustomer._id,
-        customerName: sampleCustomer.name,
-        customerPhone: sampleCustomer.phone,
-        orderType: "delivery",
-        deliveryAddress: sampleCustomer.address,
-        items: [
-          {
-            medicineId: medicines[2]._id,
-            medicineName: medicines[2].name,
-            quantity: 2,
-            price: medicines[2].sellingPrice,
-            total: medicines[2].sellingPrice * 2,
-          },
-        ],
-        prescriptionId: prescription._id,
-        subtotal: medicines[2].sellingPrice * 2,
-        grandTotal: medicines[2].sellingPrice * 2 + 50,
-        paymentMethod: "cod",
-        paymentStatus: "pending",
-        orderStatus: "placed",
-        staffId: staffList[0]._id,
-      },
-    ]);
 
     await Report.create({
       reportType: "sales",
@@ -677,7 +629,7 @@ const seedDatabase = async () => {
     console.log(
       `✓ Generated ${purchaseOrders.length} native PurchaseOrders (Regular + AI Drafts), ${alerts.length} Alerts`,
     );
-    console.log(`✓ Generated custom user Orders, Prescriptions, Reports`);
+    console.log(`✓ Generated custom reports`);
 
     // ── 7. SEED AUDIT LOGS ─────────────────────────────────────────────
     const auditEntries = [];
@@ -793,8 +745,7 @@ const seedDatabase = async () => {
       ║                                                         ║
       ║ Extensions                                              ║
       ║ ├─ PurchaseOrders     : ${purchaseOrders.length.toString().padEnd(30)}║
-      ║ ├─ Alerts/Notifs      : ${alerts.length.toString().padEnd(30)}║
-      ║ ├─ Orders / Prescrips : 1 / 1                         ║
+      ║ ├─ Alerts             : ${alerts.length.toString().padEnd(30)}║
       ║ └─ Misc (Reports)     : generated                       ║
       ╚═════════════════════════════════════════════════════════╝
         `);

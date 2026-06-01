@@ -1,3 +1,8 @@
+/**
+ * @file Manages medicine inventory records, batches, pricing, and dynamic categories.
+ * @module pages/MedicineInventory
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import dayjs from 'dayjs';
@@ -5,6 +10,7 @@ import axiosInstance from '../utils/axiosConfig';
 
 // MUI imports
 import {
+    Autocomplete,
     TextField,
     Button,
     Select,
@@ -41,17 +47,6 @@ import {
     FaPills,
 } from 'react-icons/fa';
 
-const CATEGORIES = [
-    'Tablet',
-    'Capsule',
-    'Syrup',
-    'Injection',
-    'Ointment',
-    'Drops',
-    'Inhaler',
-    'Supplement',
-];
-
 const emptyForm = {
     medicineId: '',
     name: '',
@@ -70,6 +65,7 @@ const MedicineInventory = () => {
     const [medicines, setMedicines] = useState([]);
     const [allMedicines, setAllMedicines] = useState([]); // keep full list for searches
     const [suppliers, setSuppliers] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRow, setSelectedRow] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -117,6 +113,7 @@ const MedicineInventory = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Fetches active suppliers from the backend database.
     const fetchSuppliers = useCallback(async function fetchSuppliersImpl() {
         try {
             const res = await axiosInstance.get('/suppliers');
@@ -128,10 +125,23 @@ const MedicineInventory = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Fetches dynamic medicine categories from the backend database.
+    const fetchCategories = useCallback(async function fetchCategoriesImpl() {
+        try {
+            const res = await axiosInstance.get('/categories');
+            const data = Array.isArray(res.data.categories) ? res.data.categories : [];
+            const categoryNames = data.map((c) => c.name);
+            setCategories(categoryNames);
+        } catch (error) {
+            console.error('Failed to fetch categories list:', error);
+        }
+    }, []);
+
     useEffect(() => {
         fetchMedicines();
         fetchSuppliers();
-    }, []);
+        fetchCategories();
+    }, [fetchMedicines, fetchSuppliers, fetchCategories]);
 
     // ── helpers ────────────────────────────────────────────
     function showSnackbar(message, severity = 'success') {
@@ -268,6 +278,7 @@ const MedicineInventory = () => {
                 showSnackbar('Medicine deleted successfully');
             }
             fetchMedicines();
+            fetchCategories();
             resetForm();
         } catch (error) {
             console.error(`Operation ${type} failed:`, error);
@@ -444,9 +455,9 @@ const MedicineInventory = () => {
 
                         <Divider sx={{ mb: 2.5 }} />
 
-                        <Grid container spacing={2.5}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                             {/* 1 — Medicine ID (Batch Num) */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Batch No. (ID)"
                                     fullWidth
@@ -456,10 +467,10 @@ const MedicineInventory = () => {
                                     onChange={handleChange('medicineId')}
                                     disabled={isEditMode}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 2 — Medicine Name */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Medicine Name"
                                     fullWidth
@@ -468,28 +479,36 @@ const MedicineInventory = () => {
                                     value={form.name}
                                     onChange={handleChange('name')}
                                 />
-                            </Grid>
+                            </div>
 
-                            {/* 3 — Category */}
-                            <Grid item xs={12} sm={6} md={3}>
-                                <FormControl fullWidth size="small" required>
-                                    <InputLabel>Category</InputLabel>
-                                    <Select
-                                        value={form.category}
-                                        label="Category"
-                                        onChange={handleChange('category')}
-                                    >
-                                        {CATEGORIES.map((cat) => (
-                                            <MenuItem key={cat} value={cat}>
-                                                {cat}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                             {/* 3 — Category */}
+                            <div>
+                                <Autocomplete
+                                    fullWidth
+                                    freeSolo
+                                    options={categories}
+                                    value={form.category}
+                                    onChange={(event, newValue) => {
+                                        setForm((prev) => ({ ...prev, category: newValue || '' }));
+                                    }}
+                                    onInputChange={(event, newInputValue) => {
+                                        setForm((prev) => ({ ...prev, category: newInputValue }));
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Category"
+                                            size="small"
+                                            required
+                                            fullWidth
+                                            placeholder="e.g., Tablet, Syrup"
+                                        />
+                                    )}
+                                />
+                            </div>
 
                             {/* Rack Number */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Rack Number"
                                     fullWidth
@@ -498,10 +517,10 @@ const MedicineInventory = () => {
                                     value={form.rackNumber}
                                     onChange={handleChange('rackNumber')}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* Purchase Price */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Purchase Price (₹)"
                                     fullWidth
@@ -514,10 +533,10 @@ const MedicineInventory = () => {
                                         startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* Selling Price */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Selling Price (₹)"
                                     fullWidth
@@ -530,10 +549,10 @@ const MedicineInventory = () => {
                                         startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 5 — Stock Quantity */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Stock Quantity"
                                     fullWidth
@@ -543,10 +562,10 @@ const MedicineInventory = () => {
                                     value={form.stockQuantity}
                                     onChange={handleChange('stockQuantity')}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 6 — Expiry Date */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <DatePicker
                                     label="Expiry Date"
                                     value={form.expiryDate}
@@ -555,10 +574,10 @@ const MedicineInventory = () => {
                                         textField: { size: 'small', fullWidth: true, required: true },
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 7 — Supplier String */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <FormControl fullWidth size="small" required>
                                     <InputLabel>Supplier</InputLabel>
                                     <Select
@@ -567,14 +586,14 @@ const MedicineInventory = () => {
                                         onChange={handleChange('supplierId')}
                                     >
                                         {suppliers.map((s) => (
-                                            <MenuItem key={s.name} value={s.name}>
-                                                {s.name}
+                                            <MenuItem key={s.supplier_name} value={s.supplier_name}>
+                                                {s.supplier_name}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
-                            </Grid>
-                        </Grid>
+                            </div>
+                        </div>
 
                         {/* ── Action Buttons ──────────────────────── */}
                         <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>

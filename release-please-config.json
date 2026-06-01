@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "medistock-frontend",
+      "component": "frontend"
+    },
+    "server": {
+      "release-type": "node",
+      "package-name": "medistock-backend",
+      "component": "backend"
+    }
+  }
+}

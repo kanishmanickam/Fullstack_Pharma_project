@@ -1,5 +1,7 @@
-// Utility functions for MediStock AI
-
+/**
+ * @file Helper utilities and shared constants for MediStock.
+ * @module utils/helpers
+ */
 /**
  * Calculate days until expiry
  */

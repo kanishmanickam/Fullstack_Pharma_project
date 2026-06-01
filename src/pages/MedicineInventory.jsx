@@ -584,8 +584,8 @@ const MedicineInventory = () => {
                                         onChange={handleChange('supplierId')}
                                     >
                                         {suppliers.map((s) => (
-                                            <MenuItem key={s.name} value={s.name}>
-                                                {s.name}
+                                            <MenuItem key={s.supplier_name} value={s.supplier_name}>
+                                                {s.supplier_name}
                                             </MenuItem>
                                         ))}
                                     </Select>

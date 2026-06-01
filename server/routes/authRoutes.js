@@ -1,5 +1,10 @@
+/**
+ * @file Handles routing and authentication for user accounts.
+ * @module routes/auth
+ */
+
 import express from 'express';
-import { protect, authorize, ownerOnly, stampUserAction } from '../middleware/auth.js';
+import { protect, ownerOnly, stampUserAction } from '../middleware/auth.js';
 import {
   register,
   login,

@@ -1,6 +1,10 @@
-// Prescription Routes
+/**
+ * @file Handles upload and management of customer prescriptions.
+ * @module routes/prescription
+ */
 
 import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import {
@@ -15,7 +19,7 @@ import {
 
 const router = express.Router();
 
-// Configure multer for file upload
+// Configures multer storage for prescription files.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/prescriptions/');
@@ -26,8 +30,8 @@ const storage = multer.diskStorage({
   },
 });
 
+// Filters uploaded files to allow only images and PDFs.
 const fileFilter = (req, file, cb) => {
-  // Accept only images and PDFs
   const allowedTypes = /jpeg|jpg|png|pdf/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
@@ -48,12 +52,12 @@ const upload = multer({
 });
 
 // Routes
-router.post('/upload', upload.single('prescription'), uploadPrescription);
-router.get('/', getAllPrescriptions);
-router.get('/stats', getPrescriptionStats);
-router.get('/customer/:customerId', getCustomerPrescriptions);
-router.get('/:id', getPrescriptionById);
-router.put('/:id/review', reviewPrescription); // Owner only
-router.delete('/:id', deletePrescription);
+router.post('/upload', protect, upload.single('prescription'), uploadPrescription);
+router.get('/', protect, getAllPrescriptions);
+router.get('/stats', protect, getPrescriptionStats);
+router.get('/customer/:customerId', protect, getCustomerPrescriptions);
+router.get('/:id', protect, getPrescriptionById);
+router.put('/:id/review', protect, authorize('owner'), reviewPrescription); // Owner only
+router.delete('/:id', protect, authorize('owner'), deletePrescription);
 
 export default router;

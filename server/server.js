@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import log from './utils/logger.js';
 import { errorHandler, notFound, requestLogger } from './middleware/errorHandler.js';
+import boxen from 'boxen';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -35,27 +36,17 @@ const app = express();
 await connectDB();
 
 // Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://fullstack-pharma-project.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+const allowedOrigins = process.env.FRONTEND_URL.split(',');
 
-console.log('✓ CORS Allowed Origins:', allowedOrigins);
-log('INFO', 'CORS Configuration', { allowedOrigins, frontendUrl: process.env.FRONTEND_URL });
+console.log('CORS Allowed Origins:', allowedOrigins);
 
 // Resolves and validates incoming CORS origins dynamically.
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) {
-      console.log('✓ CORS: No origin (Mobile/CLI request)');
-      callback(null, true);
-    } else if (allowedOrigins.includes(origin)) {
-      console.log(`✓ CORS: Allowed origin - ${origin}`);
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log(`✗ CORS: Blocked origin - ${origin}`);
+      console.warn(`CORS: Blocked unauthorized origin - ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -117,17 +108,25 @@ const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
-    log('INFO', `Server running on port ${PORT}`);
-    console.log(`
-      ╔═══════════════════════════════════════════════════╗
-      ║   MediStock Backend Server Started Successfully   ║
-      ╠═══════════════════════════════════════════════════╣
-      ║ API Server:  http://localhost:${PORT}                  ║
-      ║ Health:      http://localhost:${PORT}/api/health       ║
-      ║ Environment: ${process.env.NODE_ENV || 'development'}       ║
-      ║ Database:    ${process.env.MONGODB_URI || 'Not configured'} ║
-      ╚═══════════════════════════════════════════════════╝
-    `);
+    console.log(`Server running on port ${PORT}`);
+    const text = [
+      `MediStock Backend Server Started Successfully`,
+      `API Server:  http://localhost:5000`,
+      `Health:      http://localhost:5000/api/health`,
+      `Environment: ${process.env.NODE_ENV || 'development'}`,
+      `Database:    ${process.env.MONGODB_URI || 'Not configured'}`
+    ].join('\n');
+
+    const formattedBox = boxen(text, {
+      padding: 1,
+      margin: 1,
+      borderStyle: 'double',
+      borderColor: 'green',
+      title: 'System Status',
+      titleAlignment: 'center'
+    });
+
+    console.log(formattedBox);
   });
 }
 

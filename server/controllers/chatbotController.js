@@ -1,5 +1,7 @@
 import axios from 'axios';
-import { Medicine, Bill, Alert } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { Bill } from '../models/billModel.js';
+import { Alert } from '../models/alertModel.js';
 import { isNearExpiry, isExpired } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 

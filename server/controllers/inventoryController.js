@@ -1,8 +1,6 @@
-import {
-  Medicine,
-  InventoryHistory,
-  AuditLog
-} from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
+import { AuditLog } from '../models/auditLogModel.js';
 import {
   sortByFEFO,
   isNearExpiry,

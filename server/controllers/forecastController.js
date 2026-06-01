@@ -1,4 +1,7 @@
-import { Medicine, AuditLog, InventoryHistory, ForecastParameters } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { AuditLog } from '../models/auditLogModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
+import { ForecastParameters } from '../models/forecastModel.js';
 import { PurchaseOrder, Supplier } from '../models/supplierModels.js';
 import { computeForecast } from '../ml/demandForecast.js';
 import log from '../utils/logger.js';

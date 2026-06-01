@@ -1,4 +1,6 @@
-import { Medicine, Bill, InventoryHistory } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { Bill } from '../models/billModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
 import { lstmForecast } from './lstmModel.js';
 
 /**

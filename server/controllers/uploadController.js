@@ -2,7 +2,8 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Medicine, AuditLog } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { AuditLog } from '../models/auditLogModel.js';
 import { detectAnomalies } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 

@@ -1,4 +1,4 @@
-import { Medicine } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
 import log from '../utils/logger.js';
 import { createAuditEntry } from '../middleware/auditLogger.js';
 

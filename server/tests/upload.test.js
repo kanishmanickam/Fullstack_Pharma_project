@@ -1,7 +1,9 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import app from '../server.js';
-import { Medicine, AuditLog, User } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { AuditLog } from '../models/auditLogModel.js';
+import { User } from '../models/userModel.js';
 import jwt from 'jsonwebtoken';
 import XLSX from 'xlsx';
 import path from 'path';

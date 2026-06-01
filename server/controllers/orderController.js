@@ -1,6 +1,9 @@
 // Order Controller
 
-import { Order, Customer, Medicine, Prescription } from '../models/index.js';
+import { Order } from '../models/orderModel.js';
+import { Customer } from '../models/customerModel.js';
+import { Medicine } from '../models/medicineModel.js';
+import { Prescription } from '../models/prescriptionModel.js';
 import { sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
 
 // Create order

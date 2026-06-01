@@ -1,4 +1,4 @@
-import { User } from '../models/index.js';
+import { User } from '../models/userModel.js';
 import { generateToken } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 import { createAuditEntry } from '../middleware/auditLogger.js';

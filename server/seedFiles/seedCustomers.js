@@ -10,7 +10,7 @@
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { Customer } from "../models/index.js";
+import { Customer } from "../models/customerModel.js";
 
 dotenv.config();
 

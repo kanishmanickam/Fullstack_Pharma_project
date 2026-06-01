@@ -11,10 +11,12 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import connectDB from "../config/database.js";
-import { Medicine, Customer, Bill, InventoryHistory } from "../models/index.js";
+import { Medicine } from "../models/medicineModel.js";
+import { Customer } from "../models/customerModel.js";
+import { Bill } from "../models/billModel.js";
+import { InventoryHistory } from "../models/inventoryHistoryModel.js";
 
 dotenv.config();
 

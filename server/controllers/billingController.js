@@ -1,5 +1,9 @@
-import { Bill, Medicine, Customer, InventoryHistory, User } from '../models/index.js';
-import { generateBillNumber, sortByFEFO, formatCurrency } from '../utils/helpers.js';
+import { Bill } from '../models/billModel.js';
+import { Medicine } from '../models/medicineModel.js';
+import { Customer } from '../models/customerModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
+import { User } from '../models/userModel.js';
+import { generateBillNumber } from '../utils/helpers.js';
 import { sendBillNotification, sendEmailNotification, sendWhatsAppNotification } from '../utils/notifications.js';
 import { generateBillPDF } from '../utils/pdfGenerator.js';
 import log from '../utils/logger.js';

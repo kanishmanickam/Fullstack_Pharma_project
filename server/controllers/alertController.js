@@ -1,6 +1,7 @@
-import { Alert, Medicine, InventoryHistory } from '../models/index.js';
-import { isNearExpiry, isExpired, classifyMovement } from '../utils/helpers.js';
-import { sendAlertNotification } from '../utils/notifications.js';
+import { Alert } from '../models/alertModel.js';
+import { Medicine } from '../models/medicineModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
+import { isNearExpiry, isExpired } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 
 // Generate alerts

@@ -1,6 +1,7 @@
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { User, Medicine, Customer, Bill, Category } from "../models/index.js";
+import { Medicine } from "../models/medicineModel.js";
+import { Customer } from "../models/customerModel.js";
+import { Bill } from "../models/billModel.js";
 import connectDB from "../config/database.js";
 import { Supplier } from "../models/supplierModels.js";
 
@@ -13,7 +14,6 @@ const seedDatabase = async () => {
 
     // Clear existing data (preserves Users)
     // await User.deleteMany({});
-    await Category.deleteMany({});
     await Medicine.deleteMany({});
     await Customer.deleteMany({});
     await Bill.deleteMany({});
@@ -34,19 +34,12 @@ const seedDatabase = async () => {
       "Antihypertensive",
     ];
 
-    const categoryDocs = await Category.insertMany(
-      categoryNames.map((name) => ({
-        name,
-        description: `Standard ${name} Category`,
-        isApproved: true,
-      })),
-    );
-    console.log(`${categoryDocs.length} Categories seeded`);
+    console.log(`${categoryNames.length} Categories prepared`);
 
     // Build map for quick access
     const categoryMap = {};
-    categoryDocs.forEach((c) => {
-      categoryMap[c.name] = c._id;
+    categoryNames.forEach((name) => {
+      categoryMap[name] = name;
     });
 
     // Users are no longer seeded here to prevent hardcoded credentials.

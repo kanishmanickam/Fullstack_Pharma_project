@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
-import { Alert } from '../models/index.js';
+import { Alert } from '../models/alertModel.js';
 import log from '../utils/logger.js';
 
 const router = express.Router();

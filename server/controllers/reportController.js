@@ -1,4 +1,7 @@
-import { Medicine, Bill, InventoryHistory, Alert } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
+import { Bill } from '../models/billModel.js';
+import { InventoryHistory } from '../models/inventoryHistoryModel.js';
+import { Alert } from '../models/alertModel.js';
 import { calculateDemandForecast, classifyMovement, isNearExpiry } from '../utils/helpers.js';
 import log from '../utils/logger.js';
 

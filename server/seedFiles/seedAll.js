@@ -1,19 +1,17 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import connectDB from "../config/database.js";
-import {
-  User,
-  Medicine,
-  Customer,
-  Bill,
-  InventoryHistory,
-  AuditLog,
-  Alert,
-  Report,
-  Notification,
-  Prescription,
-  Order,
-} from "../models/index.js";
+import { User } from "../models/userModel.js";
+import { Medicine } from "../models/medicineModel.js";
+import { Customer } from "../models/customerModel.js";
+import { Bill } from "../models/billModel.js";
+import { InventoryHistory } from "../models/inventoryHistoryModel.js";
+import { AuditLog } from "../models/auditLogModel.js";
+import { Alert } from "../models/alertModel.js";
+import { Report } from "../models/reportModel.js";
+import { Notification } from "../models/notificationModel.js";
+import { Prescription } from "../models/prescriptionModel.js";
+import { Order } from "../models/orderModel.js";
 import { Supplier, PurchaseOrder } from "../models/supplierModels.js";
 
 dotenv.config();

@@ -1,4 +1,4 @@
-import { AuditLog } from '../models/index.js';
+import { AuditLog } from '../models/auditLogModel.js';
 import log from '../utils/logger.js';
 
 // GET /api/audit — paginated, filterable audit log (owner only)

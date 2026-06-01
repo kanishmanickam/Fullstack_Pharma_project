@@ -13,7 +13,10 @@
 
 import dotenv from "dotenv";
 import connectDB from "../config/database.js";
-import { AuditLog, User, Medicine, Bill } from "../models/index.js";
+import { AuditLog } from "../models/auditLogModel.js";
+import { User } from "../models/userModel.js";
+import { Medicine } from "../models/medicineModel.js";
+import { Bill } from "../models/billModel.js";
 import { Supplier, PurchaseOrder } from "../models/supplierModels.js";
 
 dotenv.config();

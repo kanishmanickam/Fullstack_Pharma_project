@@ -1,5 +1,5 @@
 import { Supplier, PurchaseOrder } from '../models/supplierModels.js';
-import { Medicine } from '../models/index.js';
+import { Medicine } from '../models/medicineModel.js';
 import log from '../utils/logger.js';
 
 // ============ SUPPLIER MANAGEMENT ============

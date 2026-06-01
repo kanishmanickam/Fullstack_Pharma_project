@@ -1,4 +1,4 @@
-import { Customer } from '../models/index.js';
+import { Customer } from '../models/customerModel.js';
 import log from '../utils/logger.js';
 
 // Create customer

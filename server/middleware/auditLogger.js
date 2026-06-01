@@ -11,7 +11,7 @@
  *         and the login route (recorded explicitly in authController)
  */
 
-import { AuditLog } from '../models/index.js';
+import { AuditLog } from '../models/auditLogModel.js';
 import log from '../utils/logger.js';
 
 // ── Path → { action, module } resolution table ───────────────────

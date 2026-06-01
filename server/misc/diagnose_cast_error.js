@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { Medicine, Category } from './models/index.js';
+import { Medicine } from './models/medicineModel.js';
 
 dotenv.config();
 

@@ -455,9 +455,9 @@ const MedicineInventory = () => {
 
                         <Divider sx={{ mb: 2.5 }} />
 
-                        <Grid container spacing={2.5}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                             {/* 1 — Medicine ID (Batch Num) */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Batch No. (ID)"
                                     fullWidth
@@ -467,10 +467,10 @@ const MedicineInventory = () => {
                                     onChange={handleChange('medicineId')}
                                     disabled={isEditMode}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 2 — Medicine Name */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Medicine Name"
                                     fullWidth
@@ -479,11 +479,12 @@ const MedicineInventory = () => {
                                     value={form.name}
                                     onChange={handleChange('name')}
                                 />
-                            </Grid>
+                            </div>
 
                              {/* 3 — Category */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <Autocomplete
+                                    fullWidth
                                     freeSolo
                                     options={categories}
                                     value={form.category}
@@ -499,14 +500,15 @@ const MedicineInventory = () => {
                                             label="Category"
                                             size="small"
                                             required
+                                            fullWidth
                                             placeholder="e.g., Tablet, Syrup"
                                         />
                                     )}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* Rack Number */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Rack Number"
                                     fullWidth
@@ -515,10 +517,10 @@ const MedicineInventory = () => {
                                     value={form.rackNumber}
                                     onChange={handleChange('rackNumber')}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* Purchase Price */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Purchase Price (₹)"
                                     fullWidth
@@ -531,10 +533,10 @@ const MedicineInventory = () => {
                                         startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* Selling Price */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Selling Price (₹)"
                                     fullWidth
@@ -547,10 +549,10 @@ const MedicineInventory = () => {
                                         startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 5 — Stock Quantity */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <TextField
                                     label="Stock Quantity"
                                     fullWidth
@@ -560,10 +562,10 @@ const MedicineInventory = () => {
                                     value={form.stockQuantity}
                                     onChange={handleChange('stockQuantity')}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 6 — Expiry Date */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <DatePicker
                                     label="Expiry Date"
                                     value={form.expiryDate}
@@ -572,10 +574,10 @@ const MedicineInventory = () => {
                                         textField: { size: 'small', fullWidth: true, required: true },
                                     }}
                                 />
-                            </Grid>
+                            </div>
 
                             {/* 7 — Supplier String */}
-                            <Grid item xs={12} sm={6} md={3}>
+                            <div>
                                 <FormControl fullWidth size="small" required>
                                     <InputLabel>Supplier</InputLabel>
                                     <Select
@@ -590,8 +592,8 @@ const MedicineInventory = () => {
                                         ))}
                                     </Select>
                                 </FormControl>
-                            </Grid>
-                        </Grid>
+                            </div>
+                        </div>
 
                         {/* ── Action Buttons ──────────────────────── */}
                         <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>

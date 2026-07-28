@@ -1,13 +1,13 @@
 {
   "name": "medistock-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Backend for MediStock AI pharmacy inventory management system",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "seed": "node seedAll.js",
+    "seed": "node seedFiles/seedAll.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "keywords": [
